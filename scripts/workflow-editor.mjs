@@ -46,6 +46,71 @@ function shorten(value, max = 92) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+function wrapText(value, width = 88) {
+  const text = String(value ?? "").replace(/\r/g, "");
+  const paragraphs = text.split("\n");
+  const lines = [];
+
+  for (const paragraph of paragraphs) {
+    if (!paragraph.trim()) {
+      lines.push("");
+      continue;
+    }
+
+    const words = paragraph.split(/\s+/);
+    let current = "";
+
+    for (const word of words) {
+      if (!current) {
+        current = word;
+        continue;
+      }
+
+      if ((current + " " + word).length <= width) {
+        current += " " + word;
+      } else {
+        lines.push(current);
+        current = word;
+      }
+    }
+
+    if (current) {
+      lines.push(current);
+    }
+  }
+
+  return lines;
+}
+
+function renderEditScreen(question, currentValue) {
+  clearScreen();
+
+  const terminalWidth = process.stdout.columns || 100;
+  const wrapWidth = Math.max(40, Math.min(terminalWidth - 8, 110));
+  const wrapped = wrapText(currentValue, wrapWidth).slice(0, 10);
+
+  console.log(`${ANSI.bold}${ANSI.white}ContentWorkflow CLI Editor${ANSI.reset}`);
+  console.log(`${ANSI.dim}Edit Mode${ANSI.reset}`);
+  console.log("");
+
+  console.log(`${ANSI.cyan}${question}${ANSI.reset}`);
+  console.log("");
+
+  console.log(`${ANSI.dim}Current value:${ANSI.reset}`);
+  if (wrapped.length === 0) {
+    console.log(`${ANSI.dim}(empty)${ANSI.reset}`);
+  } else {
+    for (const line of wrapped) {
+      console.log(`${ANSI.dim}${line}${ANSI.reset}`);
+    }
+  }
+
+  console.log("");
+  console.log(`${ANSI.yellow}Enter new value below.${ANSI.reset}`);
+  console.log(`${ANSI.dim}Blank input keeps the current value.${ANSI.reset}`);
+  console.log("");
+}
+
 function buildEditorItems(data) {
   const items = [];
 
@@ -160,15 +225,15 @@ async function promptForInput(question, currentValue) {
   process.stdin.setRawMode(false);
 
   return await new Promise((resolve) => {
+    renderEditScreen(question, currentValue);
+
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
+      terminal: true,
     });
 
-    console.log("");
-    console.log(`${ANSI.cyan}${question}${ANSI.reset}`);
-    console.log(`${ANSI.dim}Current value:${ANSI.reset} ${currentValue}`);
-    rl.question(`${ANSI.yellow}Enter new value (blank = keep current): ${ANSI.reset}`, (answer) => {
+    rl.question("> ", (answer) => {
       rl.close();
       process.stdin.setRawMode(true);
       resolve(answer);
