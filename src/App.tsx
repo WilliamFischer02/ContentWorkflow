@@ -366,7 +366,7 @@ useEffect(() => {
                   id={`workflow-${workflow.id}`}
                   className="scroll-mt-28"
                 >
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(320px,540px)_96px_minmax(320px,540px)] md:items-center md:justify-between">
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(320px,540px)_96px_minmax(320px,540px)] md:items-start md:justify-between">
                     <div
                       className={cn(
                         alignLeft ? "md:col-start-1" : "md:col-start-3",
@@ -376,7 +376,7 @@ useEffect(() => {
 						  className={cn(
 							"rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition duration-500",
 							workflow.glowClass,
-							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-45 saturate-50 grayscale-[0.45]",
+							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-72 saturate-80 grayscale-[0.08]",
 						  )}
 						>
                         <div>
@@ -410,7 +410,7 @@ useEffect(() => {
                               >
                                 <div className="relative flex min-h-[88px] justify-center pt-1">
                                   {!isLast && (
-                                    <div className="absolute left-1/2 top-7 bottom-[-14px] w-px -translate-x-1/2 bg-white/10" />
+                                    <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/14" />
                                   )}
 
                                   <button
@@ -462,15 +462,16 @@ useEffect(() => {
                       </div>
                     </div>
 
-                      <div className="relative hidden min-h-[220px] md:flex md:items-center md:justify-center">
+                      <div className="relative hidden min-h-0 md:flex md:self-start md:justify-center">
                       <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/12" />
                       <div
 						  className={cn(
-							"relative z-10 grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-gradient-to-b from-neutral-100/10 to-neutral-700/10 transition duration-500",
+							"relative z-10 mt-8 grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-gradient-to-b from-neutral-100/10 to-neutral-700/10 transition duration-500",
 							workflow.glowClass,
-							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-45 saturate-50 grayscale-[0.45]",
+							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-70 saturate-80 grayscale-[0.08]",
 						  )}
 						>
+						
                         <WorkflowIcon className="h-6 w-6 text-white" />
                       </div>
                     </div>

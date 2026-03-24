@@ -1,0 +1,107 @@
+﻿
+==============================================================================
+CONTENTWORKFLOW REPO AUDIT
+==============================================================================
+Timestamp: 2026-03-24 02:58:48
+Repo Root:  C:\Users\wills\OneDrive\Documents\GitHub\ContentWorkflow
+
+==============================================================================
+DIRECTORY CHECK
+==============================================================================
+[OK]  .github
+[OK]  .github\workflows
+[OK]  public
+[OK]  src
+[OK]  scripts
+
+==============================================================================
+FILE CHECK
+==============================================================================
+[OK]  .gitignore  |  56 bytes  |  5 lines
+[OK]  PROGRESS.md  |  3229 bytes  |  76 lines
+[OK]  package.json  |  608 bytes  |  26 lines
+[OK]  vite.config.ts  |  236 bytes  |  7 lines
+[OK]  tsconfig.json  |  126 bytes  |  7 lines
+[OK]  tsconfig.app.json  |  684 bytes  |  23 lines
+[OK]  tsconfig.node.json  |  636 bytes  |  22 lines
+[OK]  index.html  |  317 bytes  |  12 lines
+[OK]  src\App.tsx  |  19636 bytes  |  454 lines
+[OK]  src\main.tsx  |  250 bytes  |  9 lines
+[OK]  src\index.css  |  830 bytes  |  48 lines
+[OK]  public\siteContent.json  |  8338 bytes  |  221 lines
+[OK]  .github\workflows\deploy.yml  |  982 bytes  |  39 lines
+[OK]  scripts\workflow-editor.mjs  |  9458 bytes  |  280 lines
+
+==============================================================================
+JSON VALIDATION
+==============================================================================
+[OK]  package.json parses successfully
+[OK]  package.json script: dev = vite
+[OK]  package.json script: build = tsc -b && vite build
+[OK]  package.json script: preview = vite preview
+[MISS] package.json script: editor
+[OK]  public/siteContent.json parses successfully
+[OK]  hero block exists
+[OK]  workflows count = 3
+[OK]  filmKanban block exists
+[OK]  footerCards count = 3
+
+==============================================================================
+KEY CONTENT MARKERS
+==============================================================================
+[OK]  Vite base path
+[OK]  Tailwind Vite plugin
+[OK]  Tailwind CSS import
+[OK]  App references site content JSON
+[OK]  Chapter widget data usage
+[OK]  Film kanban section id
+[OK]  GitHub Pages deploy action
+[OK]  Pages artifact upload action
+[OK]  .gitignore excludes node_modules
+[OK]  .gitignore excludes dist
+[OK]  CLI keypress handling
+[OK]  CLI edits public/siteContent.json
+[OK]  CLI triggers build
+
+==============================================================================
+NODE / NPM DETECTION
+==============================================================================
+[MISS] node.exe not found in common install paths
+[MISS] npm.cmd not found in common install paths
+
+==============================================================================
+GIT STATUS
+==============================================================================
+[MISS] git command not available in PATH
+
+==============================================================================
+TRIMMED FILE TREE
+==============================================================================
+[DIR]  .git
+[DIR]  .github
+[DIR]  .github/workflows
+[FILE] .github/workflows/deploy.yml
+[FILE] .gitignore
+[FILE] index.html
+[FILE] package.json
+[FILE] package-lock.json
+[FILE] PROGRESS.md
+[DIR]  public
+[FILE] public/siteContent.json
+[FILE] README.md
+[DIR]  scripts
+[FILE] scripts/Update-ProgressTree.ps1
+[FILE] scripts/workflow-editor.mjs
+[DIR]  src
+[FILE] src/App.tsx
+[FILE] src/index.css
+[FILE] src/main.tsx
+[FILE] tsconfig.app.json
+[FILE] tsconfig.json
+[FILE] tsconfig.node.json
+[FILE] vite.config.ts
+
+==============================================================================
+AUDIT COMPLETE
+==============================================================================
+Report written to: C:\Users\wills\OneDrive\Documents\GitHub\ContentWorkflow\REPO_AUDIT.txt
