@@ -19,12 +19,12 @@
           "id": "gaming-01",
           "title": "Trend / Game Priority",
           "description": "Open your game shortlist, trend notes, and clip-worthy formats.",
-          "url": "#replace-with-gaming-trend-doc",
+          "url": "https://sullygnome.com/games/trending",
           "icon": "Search"
         },
         {
           "id": "gaming-02",
-          "title": "Marathon / Splatoon 3 Streams",
+          "title": "Stream Trending Game [Marathon]",
           "description": "Launch your stream setup, overlays, and recording checklist.",
           "url": "#replace-with-stream-setup",
           "icon": "PlaySquare"
@@ -45,8 +45,8 @@
         },
         {
           "id": "gaming-05",
-          "title": "Caption + Metadata",
-          "description": "Hook line, title, keywords, platform copy, and tags.",
+          "title": "KEEWERD Metadata / Caption",
+          "description": "Populate details using KEEWERD V0.1.0",
           "url": "#replace-with-gaming-copy-doc",
           "icon": "Captions"
         },
