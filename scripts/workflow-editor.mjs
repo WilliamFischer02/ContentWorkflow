@@ -1,12 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, "..");
+
+const configPath = path.join(__dirname, "tool-config.json");
+const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+
+const repoRoot = config.repoRoot;
 const contentFile = path.join(repoRoot, "public", "siteContent.json");
 
 const ANSI = {
@@ -18,6 +22,13 @@ const ANSI = {
   green: "\x1b[92m",
   red: "\x1b[91m",
   bold: "\x1b[1m",
+};
+
+const STATE = {
+  mode: "sections", // sections | fields
+  selectedSectionIndex: 0,
+  selectedFieldIndex: 0,
+  dirty: false,
 };
 
 function clearScreen() {
@@ -63,10 +74,7 @@ function wrapText(value, width = 88) {
     for (const word of words) {
       if (!current) {
         current = word;
-        continue;
-      }
-
-      if ((current + " " + word).length <= width) {
+      } else if ((current + " " + word).length <= width) {
         current += " " + word;
       } else {
         lines.push(current);
@@ -87,7 +95,7 @@ function renderEditScreen(question, currentValue) {
 
   const terminalWidth = process.stdout.columns || 100;
   const wrapWidth = Math.max(40, Math.min(terminalWidth - 8, 110));
-  const wrapped = wrapText(currentValue, wrapWidth).slice(0, 10);
+  const wrapped = wrapText(currentValue, wrapWidth).slice(0, 12);
 
   console.log(`${ANSI.bold}${ANSI.white}ContentWorkflow CLI Editor${ANSI.reset}`);
   console.log(`${ANSI.dim}Edit Mode${ANSI.reset}`);
@@ -109,116 +117,6 @@ function renderEditScreen(question, currentValue) {
   console.log(`${ANSI.yellow}Enter new value below.${ANSI.reset}`);
   console.log(`${ANSI.dim}Blank input keeps the current value.${ANSI.reset}`);
   console.log("");
-}
-
-function buildEditorItems(data) {
-  const items = [];
-
-  items.push({
-    section: "Hero",
-    label: "Hero > Badge",
-    path: ["hero", "badge"],
-  });
-  items.push({
-    section: "Hero",
-    label: "Hero > Title",
-    path: ["hero", "title"],
-  });
-  items.push({
-    section: "Hero",
-    label: "Hero > Description",
-    path: ["hero", "description"],
-  });
-
-  data.workflows.forEach((workflow, workflowIndex) => {
-    items.push({
-      section: workflow.brand,
-      label: `${workflow.brand} > Brand`,
-      path: ["workflows", workflowIndex, "brand"],
-    });
-    items.push({
-      section: workflow.brand,
-      label: `${workflow.brand} > Chapter Label`,
-      path: ["workflows", workflowIndex, "chapterLabel"],
-    });
-    items.push({
-      section: workflow.brand,
-      label: `${workflow.brand} > Handle`,
-      path: ["workflows", workflowIndex, "handle"],
-    });
-    items.push({
-      section: workflow.brand,
-      label: `${workflow.brand} > Summary`,
-      path: ["workflows", workflowIndex, "summary"],
-    });
-
-    workflow.stages.forEach((stage, stageIndex) => {
-      items.push({
-        section: workflow.brand,
-        label: `${workflow.brand} > ${stage.title} > Title`,
-        path: ["workflows", workflowIndex, "stages", stageIndex, "title"],
-      });
-      items.push({
-        section: workflow.brand,
-        label: `${workflow.brand} > ${stage.title} > Description`,
-        path: ["workflows", workflowIndex, "stages", stageIndex, "description"],
-      });
-      items.push({
-        section: workflow.brand,
-        label: `${workflow.brand} > ${stage.title} > URL`,
-        path: ["workflows", workflowIndex, "stages", stageIndex, "url"],
-      });
-    });
-  });
-
-  items.push({
-    section: "Kanban",
-    label: "Kanban > Title",
-    path: ["filmKanban", "title"],
-  });
-  items.push({
-    section: "Kanban",
-    label: "Kanban > Description",
-    path: ["filmKanban", "description"],
-  });
-
-  data.filmKanban.columns.forEach((column, columnIndex) => {
-    items.push({
-      section: "Kanban",
-      label: `Kanban > ${column.title} > Column Title`,
-      path: ["filmKanban", "columns", columnIndex, "title"],
-    });
-
-    column.items.forEach((item, itemIndex) => {
-      items.push({
-        section: "Kanban",
-        label: `Kanban > ${column.title} > ${item.label}`,
-        path: ["filmKanban", "columns", columnIndex, "items", itemIndex, "label"],
-      });
-    });
-  });
-
-  data.footerCards.forEach((card, cardIndex) => {
-    items.push({
-      section: "Footer",
-      label: `Footer > Card ${cardIndex + 1} Title`,
-      path: ["footerCards", cardIndex, "title"],
-    });
-    items.push({
-      section: "Footer",
-      label: `Footer > Card ${cardIndex + 1} Text`,
-      path: ["footerCards", cardIndex, "text"],
-    });
-  });
-
-  return items;
-}
-
-function execCommand(command) {
-  execSync(command, {
-    cwd: repoRoot,
-    stdio: "inherit",
-  });
 }
 
 async function promptForInput(question, currentValue) {
@@ -250,7 +148,7 @@ async function pause(message = "Press Enter to continue...") {
       output: process.stdout,
     });
 
-    rl.question(`${message}`, () => {
+    rl.question(message, () => {
       rl.close();
       process.stdin.setRawMode(true);
       resolve();
@@ -258,71 +156,108 @@ async function pause(message = "Press Enter to continue...") {
   });
 }
 
-async function saveBuildCommitPush(itemLabel, data) {
-  clearScreen();
-  console.log(`${ANSI.bold}${ANSI.cyan}ContentWorkflow CLI Editor${ANSI.reset}`);
-  console.log(`${ANSI.dim}Saving change for:${ANSI.reset} ${itemLabel}`);
-  console.log("");
-
-  saveJson(data);
-
-  try {
-    console.log(`${ANSI.yellow}1/4 Building site...${ANSI.reset}`);
-    execCommand("npm run build");
-
-    console.log("");
-    console.log(`${ANSI.yellow}2/4 Staging updated files...${ANSI.reset}`);
-    execCommand("git add public/siteContent.json");
-
-    console.log("");
-    console.log(`${ANSI.yellow}3/4 Creating commit...${ANSI.reset}`);
-    try {
-      execCommand('git commit -m "content: update site content"');
-    } catch {
-      console.log(`${ANSI.dim}No commit created — content may be unchanged.${ANSI.reset}`);
-    }
-
-    console.log("");
-    console.log(`${ANSI.yellow}4/4 Pushing...${ANSI.reset}`);
-    try {
-      execCommand("git push");
-    } catch {
-      console.log(`${ANSI.red}Push failed. Resolve manually if needed.${ANSI.reset}`);
-    }
-
-    console.log("");
-    console.log(`${ANSI.green}Finished successfully.${ANSI.reset}`);
-  } catch {
-    console.log("");
-    console.log(`${ANSI.red}Build failed after the edit. The JSON file was still saved.${ANSI.reset}`);
-    console.log(`${ANSI.dim}Fix the issue, then rerun the editor or build manually.${ANSI.reset}`);
-  }
-
-  await pause();
+function execCommand(exe, args) {
+  execFileSync(exe, args, {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
 }
 
-let data = loadJson();
-let items = buildEditorItems(data);
-let selectedIndex = 0;
+function buildSections(data) {
+  const sections = [];
 
-function getVisibleItemCount() {
+  sections.push({
+    type: "fields",
+    label: "Hero",
+    fields: [
+      { label: "Badge", path: ["hero", "badge"] },
+      { label: "Title", path: ["hero", "title"] },
+      { label: "Description", path: ["hero", "description"] },
+    ],
+  });
+
+  data.workflows.forEach((workflow, workflowIndex) => {
+    sections.push({
+      type: "fields",
+      label: `${workflow.brand} — Workflow Meta`,
+      fields: [
+        { label: "Brand", path: ["workflows", workflowIndex, "brand"] },
+        { label: "Chapter Label", path: ["workflows", workflowIndex, "chapterLabel"] },
+        { label: "Handle", path: ["workflows", workflowIndex, "handle"] },
+        { label: "Summary", path: ["workflows", workflowIndex, "summary"] },
+      ],
+    });
+
+    workflow.stages.forEach((stage, stageIndex) => {
+      sections.push({
+        type: "fields",
+        label: `${workflow.brand} — ${stage.title}`,
+        fields: [
+          { label: "Title", path: ["workflows", workflowIndex, "stages", stageIndex, "title"] },
+          { label: "Description", path: ["workflows", workflowIndex, "stages", stageIndex, "description"] },
+          { label: "URL", path: ["workflows", workflowIndex, "stages", stageIndex, "url"] },
+        ],
+      });
+    });
+  });
+
+  sections.push({
+    type: "fields",
+    label: "Film Kanban — Meta",
+    fields: [
+      { label: "Title", path: ["filmKanban", "title"] },
+      { label: "Description", path: ["filmKanban", "description"] },
+    ],
+  });
+
+  data.filmKanban.columns.forEach((column, columnIndex) => {
+    sections.push({
+      type: "fields",
+      label: `Film Kanban — ${column.title} — Column`,
+      fields: [
+        { label: "Column Title", path: ["filmKanban", "columns", columnIndex, "title"] },
+      ],
+    });
+
+    column.items.forEach((item, itemIndex) => {
+      sections.push({
+        type: "fields",
+        label: `Film Kanban — ${column.title} — ${item.label}`,
+        fields: [
+          { label: "Label", path: ["filmKanban", "columns", columnIndex, "items", itemIndex, "label"] },
+        ],
+      });
+    });
+  });
+
+  data.footerCards.forEach((card, cardIndex) => {
+    sections.push({
+      type: "fields",
+      label: `Footer Card ${cardIndex + 1}`,
+      fields: [
+        { label: "Title", path: ["footerCards", cardIndex, "title"] },
+        { label: "Text", path: ["footerCards", cardIndex, "text"] },
+      ],
+    });
+  });
+
+  sections.push({ type: "action", action: "apply", label: "Apply queued changes" });
+  sections.push({ type: "action", action: "reload", label: "Reload from disk" });
+  sections.push({ type: "action", action: "discard", label: "Discard queued changes" });
+  sections.push({ type: "action", action: "exit", label: "Exit editor" });
+
+  return sections;
+}
+
+function getVisibleCount() {
   const terminalRows = process.stdout.rows || 30;
-
-  // Header + instructions + selected summary + footer
-  const reservedLines = 12;
-
-  // Each item usually consumes 3 lines:
-  // label, value, blank spacer
-  const linesPerItem = 3;
-
-  const count = Math.floor((terminalRows - reservedLines) / linesPerItem);
-
-  // Keep the list compact enough to stay visible in smaller PowerShell windows
-  return Math.max(6, Math.min(12, count));
+  const reserved = 11;
+  const linesPerItem = 2;
+  return Math.max(7, Math.min(14, Math.floor((terminalRows - reserved) / linesPerItem)));
 }
 
-function getWindowBounds(totalItems, selected, visibleCount) {
-  let start = selected - Math.floor(visibleCount / 2);
+function getWindowBounds(totalItems, selectedIndex, visibleCount) {
+  let start = selectedIndex - Math.floor(visibleCount / 2);
   let end = start + visibleCount;
 
   if (start < 0) {
@@ -338,68 +273,216 @@ function getWindowBounds(totalItems, selected, visibleCount) {
   return { start, end };
 }
 
-function renderMenu() {
+let persistedData = loadJson();
+let workingData = JSON.parse(JSON.stringify(persistedData));
+let sections = buildSections(workingData);
+
+function renderSectionsMenu() {
   clearScreen();
 
-  const visibleCount = getVisibleItemCount();
-  const { start, end } = getWindowBounds(items.length, selectedIndex, visibleCount);
-  const selectedItem = items[selectedIndex];
-  const selectedValue = getValueAtPath(data, selectedItem.path);
+  const visibleCount = getVisibleCount();
+  const { start, end } = getWindowBounds(sections.length, STATE.selectedSectionIndex, visibleCount);
+  const selectedSection = sections[STATE.selectedSectionIndex];
 
   console.log(`${ANSI.bold}${ANSI.white}ContentWorkflow CLI Editor${ANSI.reset}`);
-  console.log(
-    `${ANSI.dim}Use ↑ / ↓ to move, Enter to edit, R to reload from disk, Ctrl+C to exit.${ANSI.reset}`,
-  );
-  console.log(
-    `${ANSI.dim}Edits write into public/siteContent.json, then build / commit / push.${ANSI.reset}`,
-  );
+  console.log(`${ANSI.dim}Mode: Sections | ↑ / ↓ move | Enter select | Ctrl+C exit${ANSI.reset}`);
+  console.log(`${ANSI.dim}Queued changes: ${STATE.dirty ? "YES" : "NO"}${ANSI.reset}`);
   console.log("");
 
-  console.log(`${ANSI.cyan}Currently Selected${ANSI.reset}`);
-  console.log(`${ANSI.white}${selectedItem.label}${ANSI.reset}`);
-  console.log(`${ANSI.dim}${shorten(selectedValue, 120)}${ANSI.reset}`);
+  console.log(`${ANSI.cyan}Currently Selected Section${ANSI.reset}`);
+  console.log(`${ANSI.white}${selectedSection.label}${ANSI.reset}`);
   console.log("");
-
-  let previousSection = null;
 
   for (let i = start; i < end; i++) {
-    const item = items[i];
-    const currentValue = getValueAtPath(data, item.path);
-    const isSelected = i === selectedIndex;
-
-    if (item.section !== previousSection) {
-      console.log(`${ANSI.cyan}${item.section}${ANSI.reset}`);
-      previousSection = item.section;
-    }
-
+    const section = sections[i];
+    const isSelected = i === STATE.selectedSectionIndex;
     const prefix = isSelected ? `${ANSI.white}>` : `${ANSI.dim} `;
-    const labelColor = isSelected ? ANSI.white : ANSI.dim;
-    const valueColor = isSelected ? ANSI.cyan : ANSI.dim;
+    const color = isSelected ? ANSI.white : ANSI.dim;
 
-    console.log(`${prefix} ${labelColor}${item.label}${ANSI.reset}`);
-    console.log(`  ${valueColor}${shorten(currentValue, 88)}${ANSI.reset}`);
-    console.log("");
+    console.log(`${prefix} ${color}${section.label}${ANSI.reset}`);
   }
 
-  console.log(
-    `${ANSI.dim}Selected ${selectedIndex + 1} of ${items.length} | Showing ${start + 1}-${end}${ANSI.reset}`,
-  );
+  console.log("");
+  console.log(`${ANSI.dim}Showing ${start + 1}-${end} of ${sections.length}${ANSI.reset}`);
 }
 
-async function editSelectedItem() {
-  const item = items[selectedIndex];
-  const currentValue = String(getValueAtPath(data, item.path));
-  const answer = await promptForInput(item.label, currentValue);
+function renderFieldsMenu() {
+  clearScreen();
+
+  const section = sections[STATE.selectedSectionIndex];
+  const fieldMenu = [{ label: "← Back", type: "back" }, ...section.fields];
+
+  const visibleCount = getVisibleCount();
+  const { start, end } = getWindowBounds(fieldMenu.length, STATE.selectedFieldIndex, visibleCount);
+  const selectedField = fieldMenu[STATE.selectedFieldIndex];
+
+  console.log(`${ANSI.bold}${ANSI.white}ContentWorkflow CLI Editor${ANSI.reset}`);
+  console.log(`${ANSI.dim}Mode: Fields | ↑ / ↓ move | Enter edit/select | Ctrl+C exit${ANSI.reset}`);
+  console.log(`${ANSI.dim}Queued changes: ${STATE.dirty ? "YES" : "NO"}${ANSI.reset}`);
+  console.log("");
+
+  console.log(`${ANSI.cyan}${section.label}${ANSI.reset}`);
+  console.log("");
+
+  if (selectedField.type === "back") {
+    console.log(`${ANSI.white}← Back${ANSI.reset}`);
+  } else {
+    const currentValue = getValueAtPath(workingData, selectedField.path);
+    console.log(`${ANSI.white}${selectedField.label}${ANSI.reset}`);
+    console.log(`${ANSI.dim}${shorten(currentValue, 120)}${ANSI.reset}`);
+  }
+
+  console.log("");
+
+  for (let i = start; i < end; i++) {
+    const field = fieldMenu[i];
+    const isSelected = i === STATE.selectedFieldIndex;
+    const prefix = isSelected ? `${ANSI.white}>` : `${ANSI.dim} `;
+    const color = isSelected ? ANSI.white : ANSI.dim;
+
+    if (field.type === "back") {
+      console.log(`${prefix} ${color}${field.label}${ANSI.reset}`);
+    } else {
+      const value = getValueAtPath(workingData, field.path);
+      console.log(`${prefix} ${color}${field.label}${ANSI.reset}`);
+      console.log(`  ${ANSI.dim}${shorten(value, 92)}${ANSI.reset}`);
+    }
+  }
+
+  console.log("");
+  console.log(`${ANSI.dim}Showing ${start + 1}-${end} of ${fieldMenu.length}${ANSI.reset}`);
+}
+
+function render() {
+  if (STATE.mode === "sections") {
+    renderSectionsMenu();
+  } else {
+    renderFieldsMenu();
+  }
+}
+
+async function applyQueuedChanges() {
+  clearScreen();
+  console.log(`${ANSI.bold}${ANSI.white}Applying queued changes${ANSI.reset}`);
+  console.log("");
+
+  if (!STATE.dirty) {
+    console.log(`${ANSI.dim}No queued changes to apply.${ANSI.reset}`);
+    await pause();
+    return;
+  }
+
+  try {
+    saveJson(workingData);
+
+    console.log(`${ANSI.yellow}1/4 Building site...${ANSI.reset}`);
+    execCommand(config.npmCmd, ["run", "build"]);
+
+    console.log("");
+    console.log(`${ANSI.yellow}2/4 Staging content...${ANSI.reset}`);
+    execCommand(config.gitExe, ["add", "public/siteContent.json"]);
+
+    console.log("");
+    console.log(`${ANSI.yellow}3/4 Committing...${ANSI.reset}`);
+    try {
+      execCommand(config.gitExe, ["commit", "-m", "content: update site content"]);
+    } catch {
+      console.log(`${ANSI.dim}No commit created (possibly no diff).${ANSI.reset}`);
+    }
+
+    console.log("");
+    console.log(`${ANSI.yellow}4/4 Pushing...${ANSI.reset}`);
+    execCommand(config.gitExe, ["push"]);
+
+    persistedData = loadJson();
+    workingData = JSON.parse(JSON.stringify(persistedData));
+    sections = buildSections(workingData);
+    STATE.dirty = false;
+
+    console.log("");
+    console.log(`${ANSI.green}Done. Queued changes were applied.${ANSI.reset}`);
+    console.log(`${ANSI.dim}Refresh the live site after GitHub Pages finishes deploying.${ANSI.reset}`);
+  } catch (err) {
+    console.log("");
+    console.log(`${ANSI.red}Apply failed.${ANSI.reset}`);
+    console.log(`${ANSI.dim}${err instanceof Error ? err.message : String(err)}${ANSI.reset}`);
+  }
+
+  await pause();
+}
+
+async function discardQueuedChanges() {
+  workingData = JSON.parse(JSON.stringify(persistedData));
+  sections = buildSections(workingData);
+  STATE.dirty = false;
+  STATE.mode = "sections";
+  STATE.selectedFieldIndex = 0;
+}
+
+async function reloadFromDisk() {
+  persistedData = loadJson();
+  workingData = JSON.parse(JSON.stringify(persistedData));
+  sections = buildSections(workingData);
+  STATE.dirty = false;
+  STATE.mode = "sections";
+  STATE.selectedFieldIndex = 0;
+}
+
+async function editCurrentField() {
+  const section = sections[STATE.selectedSectionIndex];
+  const fieldMenu = [{ label: "← Back", type: "back" }, ...section.fields];
+  const selectedField = fieldMenu[STATE.selectedFieldIndex];
+
+  if (selectedField.type === "back") {
+    STATE.mode = "sections";
+    STATE.selectedFieldIndex = 0;
+    return;
+  }
+
+  const currentValue = String(getValueAtPath(workingData, selectedField.path));
+  const answer = await promptForInput(`${section.label} → ${selectedField.label}`, currentValue);
 
   if (!String(answer).trim()) {
     return;
   }
 
-  setValueAtPath(data, item.path, answer);
-  await saveBuildCommitPush(item.label, data);
+  setValueAtPath(workingData, selectedField.path, answer);
+  sections = buildSections(workingData);
+  STATE.dirty = true;
+}
 
-  data = loadJson();
-  items = buildEditorItems(data);
+async function handleEnter() {
+  if (STATE.mode === "sections") {
+    const selectedSection = sections[STATE.selectedSectionIndex];
+
+    if (selectedSection.type === "fields") {
+      STATE.mode = "fields";
+      STATE.selectedFieldIndex = 0;
+      return;
+    }
+
+    if (selectedSection.action === "apply") {
+      await applyQueuedChanges();
+      return;
+    }
+
+    if (selectedSection.action === "reload") {
+      await reloadFromDisk();
+      return;
+    }
+
+    if (selectedSection.action === "discard") {
+      await discardQueuedChanges();
+      return;
+    }
+
+    if (selectedSection.action === "exit") {
+      clearScreen();
+      process.exit(0);
+    }
+  } else {
+    await editCurrentField();
+  }
 }
 
 readline.emitKeypressEvents(process.stdin);
@@ -411,29 +494,48 @@ process.stdin.on("keypress", async (_, key) => {
     process.exit(0);
   }
 
-  if (key.name === "up") {
-    selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : items.length - 1;
-    renderMenu();
-    return;
-  }
+  if (STATE.mode === "sections") {
+    if (key.name === "up") {
+      STATE.selectedSectionIndex =
+        STATE.selectedSectionIndex > 0 ? STATE.selectedSectionIndex - 1 : sections.length - 1;
+      render();
+      return;
+    }
 
-  if (key.name === "down") {
-    selectedIndex = selectedIndex < items.length - 1 ? selectedIndex + 1 : 0;
-    renderMenu();
-    return;
+    if (key.name === "down") {
+      STATE.selectedSectionIndex =
+        STATE.selectedSectionIndex < sections.length - 1 ? STATE.selectedSectionIndex + 1 : 0;
+      render();
+      return;
+    }
+  } else {
+    const fieldMenuLength = 1 + sections[STATE.selectedSectionIndex].fields.length;
+
+    if (key.name === "up") {
+      STATE.selectedFieldIndex =
+        STATE.selectedFieldIndex > 0 ? STATE.selectedFieldIndex - 1 : fieldMenuLength - 1;
+      render();
+      return;
+    }
+
+    if (key.name === "down") {
+      STATE.selectedFieldIndex =
+        STATE.selectedFieldIndex < fieldMenuLength - 1 ? STATE.selectedFieldIndex + 1 : 0;
+      render();
+      return;
+    }
   }
 
   if (key.name === "return") {
-    await editSelectedItem();
-    renderMenu();
+    await handleEnter();
+    render();
     return;
   }
 
   if (key.name?.toLowerCase() === "r") {
-    data = loadJson();
-    items = buildEditorItems(data);
-    renderMenu();
+    await reloadFromDisk();
+    render();
   }
 });
 
-renderMenu();
+render();
