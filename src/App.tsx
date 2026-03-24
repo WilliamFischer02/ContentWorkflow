@@ -106,9 +106,10 @@ function cn(...parts: Array<string | false | null | undefined>) {
 }
 
 export default function App() {
-  const [content, setContent] = useState<SiteContent | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [completed, setCompleted] = useState<Record<string, boolean>>({});
+const [content, setContent] = useState<SiteContent | null>(null);
+const [loadError, setLoadError] = useState<string | null>(null);
+const [completed, setCompleted] = useState<Record<string, boolean>>({});
+const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
 
 useEffect(() => {
   let isMounted = true;
@@ -171,6 +172,50 @@ useEffect(() => {
       // Ignore storage read errors
     }
   }, []);
+  
+  useEffect(() => {
+  if (!content?.workflows?.length) return;
+
+  let frameId = 0;
+
+  const computeActiveWorkflow = () => {
+    const focusY = window.innerHeight * 0.38;
+    let bestId = content.workflows[0]?.id ?? null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (const workflow of content.workflows) {
+      const el = document.getElementById(`workflow-${workflow.id}`);
+      if (!el) continue;
+
+      const rect = el.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      const distance = Math.abs(centerY - focusY);
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestId = workflow.id;
+      }
+    }
+
+    setActiveWorkflowId((prev) => (prev === bestId ? prev : bestId));
+  };
+
+  const onScrollOrResize = () => {
+    window.cancelAnimationFrame(frameId);
+    frameId = window.requestAnimationFrame(computeActiveWorkflow);
+  };
+
+  computeActiveWorkflow();
+
+  window.addEventListener("scroll", onScrollOrResize, { passive: true });
+  window.addEventListener("resize", onScrollOrResize);
+
+  return () => {
+    window.cancelAnimationFrame(frameId);
+    window.removeEventListener("scroll", onScrollOrResize);
+    window.removeEventListener("resize", onScrollOrResize);
+  };
+}, [content]);
 
   useEffect(() => {
     try {
@@ -312,7 +357,8 @@ useEffect(() => {
           <div className="space-y-16 pt-10 md:pt-24">
             {content.workflows.map((workflow, workflowIndex) => {
               const WorkflowIcon = workflowIcons[workflow.workflowIcon];
-              const alignLeft = workflowIndex % 2 === 0;
+			  const alignLeft = workflowIndex % 2 === 0;
+			  const isActive = activeWorkflowId === null || activeWorkflowId === workflow.id;
 
               return (
                 <div
@@ -320,18 +366,19 @@ useEffect(() => {
                   id={`workflow-${workflow.id}`}
                   className="scroll-mt-28"
                 >
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(320px,540px)_96px_minmax(320px,540px)] md:items-start md:justify-between">
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(320px,540px)_96px_minmax(320px,540px)] md:items-center md:justify-between">
                     <div
                       className={cn(
                         alignLeft ? "md:col-start-1" : "md:col-start-3",
                       )}
                     >
                       <div
-                        className={cn(
-                          "rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl",
-                          workflow.glowClass,
-                        )}
-                      >
+						  className={cn(
+							"rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition duration-500",
+							workflow.glowClass,
+							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-45 saturate-50 grayscale-[0.45]",
+						  )}
+						>
                         <div>
                           <div
                             className={cn(
@@ -415,14 +462,15 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    <div className="relative hidden min-h-[220px] md:flex md:justify-center">
+                      <div className="relative hidden min-h-[220px] md:flex md:items-center md:justify-center">
                       <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/12" />
                       <div
-                        className={cn(
-                          "relative z-10 mt-10 grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-gradient-to-b from-neutral-100/10 to-neutral-700/10",
-                          workflow.glowClass,
-                        )}
-                      >
+						  className={cn(
+							"relative z-10 grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-gradient-to-b from-neutral-100/10 to-neutral-700/10 transition duration-500",
+							workflow.glowClass,
+							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-45 saturate-50 grayscale-[0.45]",
+						  )}
+						>
                         <WorkflowIcon className="h-6 w-6 text-white" />
                       </div>
                     </div>

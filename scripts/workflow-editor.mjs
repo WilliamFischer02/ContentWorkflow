@@ -28,8 +28,9 @@ const STATE = {
   mode: "sections", // sections | fields
   selectedSectionIndex: 0,
   selectedFieldIndex: 0,
-  dirty: false,
 };
+
+let queuedPaths = new Set();
 
 function clearScreen() {
   process.stdout.write("\x1Bc");
@@ -43,6 +44,10 @@ function saveJson(data) {
   fs.writeFileSync(contentFile, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function getValueAtPath(obj, pathParts) {
   return pathParts.reduce((acc, part) => acc[part], obj);
 }
@@ -52,8 +57,12 @@ function setValueAtPath(obj, pathParts, value) {
   parent[pathParts[pathParts.length - 1]] = value;
 }
 
+function pathKey(pathParts) {
+  return pathParts.join(".");
+}
+
 function shorten(value, max = 92) {
-  const text = String(value).replace(/\s+/g, " ").trim();
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
@@ -88,6 +97,171 @@ function wrapText(value, width = 88) {
   }
 
   return lines;
+}
+
+function restoreInteractiveInput() {
+  readline.emitKeypressEvents(process.stdin);
+  process.stdin.resume();
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true);
+  }
+}
+
+function execCommand(exe, args) {
+  execFileSync(exe, args, {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
+}
+
+function buildSections(data) {
+  const sections = [];
+
+  sections.push({
+    group: "HERO",
+    type: "fields",
+    label: "Hero",
+    fields: [
+      { label: "Badge", path: ["hero", "badge"] },
+      { label: "Title", path: ["hero", "title"] },
+      { label: "Description", path: ["hero", "description"] },
+    ],
+  });
+
+  data.workflows.forEach((workflow, workflowIndex) => {
+    sections.push({
+      group: workflow.brand.toUpperCase(),
+      type: "fields",
+      label: `${workflow.brand} — Workflow Meta`,
+      fields: [
+        { label: "Brand", path: ["workflows", workflowIndex, "brand"] },
+        { label: "Chapter Label", path: ["workflows", workflowIndex, "chapterLabel"] },
+        { label: "Handle", path: ["workflows", workflowIndex, "handle"] },
+        { label: "Summary", path: ["workflows", workflowIndex, "summary"] },
+      ],
+    });
+
+    workflow.stages.forEach((stage, stageIndex) => {
+      sections.push({
+        group: workflow.brand.toUpperCase(),
+        type: "fields",
+        label: `${workflow.brand} — ${stage.title}`,
+        fields: [
+          { label: "Title", path: ["workflows", workflowIndex, "stages", stageIndex, "title"] },
+          { label: "Description", path: ["workflows", workflowIndex, "stages", stageIndex, "description"] },
+          { label: "URL", path: ["workflows", workflowIndex, "stages", stageIndex, "url"] },
+        ],
+      });
+    });
+  });
+
+  sections.push({
+    group: "KANBAN",
+    type: "fields",
+    label: "Film Kanban — Meta",
+    fields: [
+      { label: "Title", path: ["filmKanban", "title"] },
+      { label: "Description", path: ["filmKanban", "description"] },
+    ],
+  });
+
+  data.filmKanban.columns.forEach((column, columnIndex) => {
+    sections.push({
+      group: "KANBAN",
+      type: "fields",
+      label: `Film Kanban — ${column.title} — Column`,
+      fields: [
+        { label: "Column Title", path: ["filmKanban", "columns", columnIndex, "title"] },
+      ],
+    });
+
+    column.items.forEach((item, itemIndex) => {
+      sections.push({
+        group: "KANBAN",
+        type: "fields",
+        label: `Film Kanban — ${column.title} — ${item.label}`,
+        fields: [
+          { label: "Label", path: ["filmKanban", "columns", columnIndex, "items", itemIndex, "label"] },
+        ],
+      });
+    });
+  });
+
+  data.footerCards.forEach((card, cardIndex) => {
+    sections.push({
+      group: "FOOTER",
+      type: "fields",
+      label: `Footer Card ${cardIndex + 1}`,
+      fields: [
+        { label: "Title", path: ["footerCards", cardIndex, "title"] },
+        { label: "Text", path: ["footerCards", cardIndex, "text"] },
+      ],
+    });
+  });
+
+  sections.push({
+    group: "ACTIONS",
+    type: "action",
+    action: "apply",
+    label: "Apply queued changes (P)",
+  });
+
+  sections.push({
+    group: "ACTIONS",
+    type: "action",
+    action: "reload",
+    label: "Reload from disk (R)",
+  });
+
+  sections.push({
+    group: "ACTIONS",
+    type: "action",
+    action: "discard",
+    label: "Discard queued changes (D)",
+  });
+
+  sections.push({
+    group: "ACTIONS",
+    type: "action",
+    action: "exit",
+    label: "Exit editor",
+  });
+
+  return sections;
+}
+
+function getFieldMenu(section) {
+  return [
+    { type: "back", label: "← Back to sections" },
+    ...section.fields.map((field) => ({
+      type: "field",
+      ...field,
+    })),
+  ];
+}
+
+function getVisibleCount() {
+  const terminalRows = process.stdout.rows || 30;
+  const reserved = 11;
+  const linesPerItem = 2;
+  return Math.max(7, Math.min(14, Math.floor((terminalRows - reserved) / linesPerItem)));
+}
+
+function getWindowBounds(totalItems, selectedIndex, visibleCount) {
+  let start = selectedIndex - Math.floor(visibleCount / 2);
+  let end = start + visibleCount;
+
+  if (start < 0) {
+    start = 0;
+    end = Math.min(totalItems, visibleCount);
+  }
+
+  if (end > totalItems) {
+    end = totalItems;
+    start = Math.max(0, end - visibleCount);
+  }
+
+  return { start, end };
 }
 
 function renderEditScreen(question, currentValue) {
@@ -129,11 +303,12 @@ async function promptForInput(question, currentValue) {
       input: process.stdin,
       output: process.stdout,
       terminal: true,
+      historySize: 0,
     });
 
     rl.question("> ", (answer) => {
       rl.close();
-      process.stdin.setRawMode(true);
+      restoreInteractiveInput();
       resolve(answer);
     });
   });
@@ -150,131 +325,14 @@ async function pause(message = "Press Enter to continue...") {
 
     rl.question(message, () => {
       rl.close();
-      process.stdin.setRawMode(true);
+      restoreInteractiveInput();
       resolve();
     });
   });
 }
 
-function execCommand(exe, args) {
-  execFileSync(exe, args, {
-    cwd: repoRoot,
-    stdio: "inherit",
-  });
-}
-
-function buildSections(data) {
-  const sections = [];
-
-  sections.push({
-    type: "fields",
-    label: "Hero",
-    fields: [
-      { label: "Badge", path: ["hero", "badge"] },
-      { label: "Title", path: ["hero", "title"] },
-      { label: "Description", path: ["hero", "description"] },
-    ],
-  });
-
-  data.workflows.forEach((workflow, workflowIndex) => {
-    sections.push({
-      type: "fields",
-      label: `${workflow.brand} — Workflow Meta`,
-      fields: [
-        { label: "Brand", path: ["workflows", workflowIndex, "brand"] },
-        { label: "Chapter Label", path: ["workflows", workflowIndex, "chapterLabel"] },
-        { label: "Handle", path: ["workflows", workflowIndex, "handle"] },
-        { label: "Summary", path: ["workflows", workflowIndex, "summary"] },
-      ],
-    });
-
-    workflow.stages.forEach((stage, stageIndex) => {
-      sections.push({
-        type: "fields",
-        label: `${workflow.brand} — ${stage.title}`,
-        fields: [
-          { label: "Title", path: ["workflows", workflowIndex, "stages", stageIndex, "title"] },
-          { label: "Description", path: ["workflows", workflowIndex, "stages", stageIndex, "description"] },
-          { label: "URL", path: ["workflows", workflowIndex, "stages", stageIndex, "url"] },
-        ],
-      });
-    });
-  });
-
-  sections.push({
-    type: "fields",
-    label: "Film Kanban — Meta",
-    fields: [
-      { label: "Title", path: ["filmKanban", "title"] },
-      { label: "Description", path: ["filmKanban", "description"] },
-    ],
-  });
-
-  data.filmKanban.columns.forEach((column, columnIndex) => {
-    sections.push({
-      type: "fields",
-      label: `Film Kanban — ${column.title} — Column`,
-      fields: [
-        { label: "Column Title", path: ["filmKanban", "columns", columnIndex, "title"] },
-      ],
-    });
-
-    column.items.forEach((item, itemIndex) => {
-      sections.push({
-        type: "fields",
-        label: `Film Kanban — ${column.title} — ${item.label}`,
-        fields: [
-          { label: "Label", path: ["filmKanban", "columns", columnIndex, "items", itemIndex, "label"] },
-        ],
-      });
-    });
-  });
-
-  data.footerCards.forEach((card, cardIndex) => {
-    sections.push({
-      type: "fields",
-      label: `Footer Card ${cardIndex + 1}`,
-      fields: [
-        { label: "Title", path: ["footerCards", cardIndex, "title"] },
-        { label: "Text", path: ["footerCards", cardIndex, "text"] },
-      ],
-    });
-  });
-
-  sections.push({ type: "action", action: "apply", label: "Apply queued changes" });
-  sections.push({ type: "action", action: "reload", label: "Reload from disk" });
-  sections.push({ type: "action", action: "discard", label: "Discard queued changes" });
-  sections.push({ type: "action", action: "exit", label: "Exit editor" });
-
-  return sections;
-}
-
-function getVisibleCount() {
-  const terminalRows = process.stdout.rows || 30;
-  const reserved = 11;
-  const linesPerItem = 2;
-  return Math.max(7, Math.min(14, Math.floor((terminalRows - reserved) / linesPerItem)));
-}
-
-function getWindowBounds(totalItems, selectedIndex, visibleCount) {
-  let start = selectedIndex - Math.floor(visibleCount / 2);
-  let end = start + visibleCount;
-
-  if (start < 0) {
-    start = 0;
-    end = Math.min(totalItems, visibleCount);
-  }
-
-  if (end > totalItems) {
-    end = totalItems;
-    start = Math.max(0, end - visibleCount);
-  }
-
-  return { start, end };
-}
-
 let persistedData = loadJson();
-let workingData = JSON.parse(JSON.stringify(persistedData));
+let workingData = deepClone(persistedData);
 let sections = buildSections(workingData);
 
 function renderSectionsMenu() {
@@ -285,19 +343,29 @@ function renderSectionsMenu() {
   const selectedSection = sections[STATE.selectedSectionIndex];
 
   console.log(`${ANSI.bold}${ANSI.white}ContentWorkflow CLI Editor${ANSI.reset}`);
-  console.log(`${ANSI.dim}Mode: Sections | ↑ / ↓ move | Enter select | Ctrl+C exit${ANSI.reset}`);
-  console.log(`${ANSI.dim}Queued changes: ${STATE.dirty ? "YES" : "NO"}${ANSI.reset}`);
+  console.log(`${ANSI.dim}Mode: Sections | ↑ / ↓ move | Enter select | P apply | R reload | D discard | Ctrl+C exit${ANSI.reset}`);
+  console.log(`${ANSI.dim}Queued edits: ${queuedPaths.size}${ANSI.reset}`);
   console.log("");
 
   console.log(`${ANSI.cyan}Currently Selected Section${ANSI.reset}`);
   console.log(`${ANSI.white}${selectedSection.label}${ANSI.reset}`);
   console.log("");
 
+  let previousGroup = null;
+
   for (let i = start; i < end; i++) {
     const section = sections[i];
     const isSelected = i === STATE.selectedSectionIndex;
     const prefix = isSelected ? `${ANSI.white}>` : `${ANSI.dim} `;
     const color = isSelected ? ANSI.white : ANSI.dim;
+
+    if (section.group !== previousGroup) {
+      if (previousGroup !== null) {
+        console.log("");
+      }
+      console.log(`${ANSI.cyan}${section.group}${ANSI.reset}`);
+      previousGroup = section.group;
+    }
 
     console.log(`${prefix} ${color}${section.label}${ANSI.reset}`);
   }
@@ -310,22 +378,21 @@ function renderFieldsMenu() {
   clearScreen();
 
   const section = sections[STATE.selectedSectionIndex];
-  const fieldMenu = [{ label: "← Back", type: "back" }, ...section.fields];
-
+  const fieldMenu = getFieldMenu(section);
   const visibleCount = getVisibleCount();
   const { start, end } = getWindowBounds(fieldMenu.length, STATE.selectedFieldIndex, visibleCount);
   const selectedField = fieldMenu[STATE.selectedFieldIndex];
 
   console.log(`${ANSI.bold}${ANSI.white}ContentWorkflow CLI Editor${ANSI.reset}`);
-  console.log(`${ANSI.dim}Mode: Fields | ↑ / ↓ move | Enter edit/select | Ctrl+C exit${ANSI.reset}`);
-  console.log(`${ANSI.dim}Queued changes: ${STATE.dirty ? "YES" : "NO"}${ANSI.reset}`);
+  console.log(`${ANSI.dim}Mode: Fields | ↑ / ↓ move | Enter edit/select | B back | P apply | R reload | D discard | Ctrl+C exit${ANSI.reset}`);
+  console.log(`${ANSI.dim}Queued edits: ${queuedPaths.size}${ANSI.reset}`);
   console.log("");
 
   console.log(`${ANSI.cyan}${section.label}${ANSI.reset}`);
   console.log("");
 
   if (selectedField.type === "back") {
-    console.log(`${ANSI.white}← Back${ANSI.reset}`);
+    console.log(`${ANSI.white}${selectedField.label}${ANSI.reset}`);
   } else {
     const currentValue = getValueAtPath(workingData, selectedField.path);
     console.log(`${ANSI.white}${selectedField.label}${ANSI.reset}`);
@@ -366,7 +433,7 @@ async function applyQueuedChanges() {
   console.log(`${ANSI.bold}${ANSI.white}Applying queued changes${ANSI.reset}`);
   console.log("");
 
-  if (!STATE.dirty) {
+  if (queuedPaths.size === 0) {
     console.log(`${ANSI.dim}No queued changes to apply.${ANSI.reset}`);
     await pause();
     return;
@@ -385,7 +452,7 @@ async function applyQueuedChanges() {
     console.log("");
     console.log(`${ANSI.yellow}3/4 Committing...${ANSI.reset}`);
     try {
-      execCommand(config.gitExe, ["commit", "-m", "content: update site content"]);
+      execCommand(config.gitExe, ["commit", "-m", `content: update site content (${queuedPaths.size} changes)`]);
     } catch {
       console.log(`${ANSI.dim}No commit created (possibly no diff).${ANSI.reset}`);
     }
@@ -395,13 +462,16 @@ async function applyQueuedChanges() {
     execCommand(config.gitExe, ["push"]);
 
     persistedData = loadJson();
-    workingData = JSON.parse(JSON.stringify(persistedData));
+    workingData = deepClone(persistedData);
     sections = buildSections(workingData);
-    STATE.dirty = false;
+    queuedPaths.clear();
+
+    STATE.mode = "sections";
+    STATE.selectedFieldIndex = 0;
 
     console.log("");
-    console.log(`${ANSI.green}Done. Queued changes were applied.${ANSI.reset}`);
-    console.log(`${ANSI.dim}Refresh the live site after GitHub Pages finishes deploying.${ANSI.reset}`);
+    console.log(`${ANSI.green}Queued changes applied successfully.${ANSI.reset}`);
+    console.log(`${ANSI.dim}The live site should reflect them after GitHub Pages redeploys.${ANSI.reset}`);
   } catch (err) {
     console.log("");
     console.log(`${ANSI.red}Apply failed.${ANSI.reset}`);
@@ -411,26 +481,26 @@ async function applyQueuedChanges() {
   await pause();
 }
 
-async function discardQueuedChanges() {
-  workingData = JSON.parse(JSON.stringify(persistedData));
+function discardQueuedChanges() {
+  workingData = deepClone(persistedData);
   sections = buildSections(workingData);
-  STATE.dirty = false;
+  queuedPaths.clear();
   STATE.mode = "sections";
   STATE.selectedFieldIndex = 0;
 }
 
-async function reloadFromDisk() {
+function reloadFromDisk() {
   persistedData = loadJson();
-  workingData = JSON.parse(JSON.stringify(persistedData));
+  workingData = deepClone(persistedData);
   sections = buildSections(workingData);
-  STATE.dirty = false;
+  queuedPaths.clear();
   STATE.mode = "sections";
   STATE.selectedFieldIndex = 0;
 }
 
 async function editCurrentField() {
   const section = sections[STATE.selectedSectionIndex];
-  const fieldMenu = [{ label: "← Back", type: "back" }, ...section.fields];
+  const fieldMenu = getFieldMenu(section);
   const selectedField = fieldMenu[STATE.selectedFieldIndex];
 
   if (selectedField.type === "back") {
@@ -443,12 +513,18 @@ async function editCurrentField() {
   const answer = await promptForInput(`${section.label} → ${selectedField.label}`, currentValue);
 
   if (!String(answer).trim()) {
+    STATE.mode = "sections";
+    STATE.selectedFieldIndex = 0;
     return;
   }
 
   setValueAtPath(workingData, selectedField.path, answer);
+  queuedPaths.add(pathKey(selectedField.path));
   sections = buildSections(workingData);
-  STATE.dirty = true;
+
+  // After a single edit, return to outer sections menu
+  STATE.mode = "sections";
+  STATE.selectedFieldIndex = 0;
 }
 
 async function handleEnter() {
@@ -467,12 +543,12 @@ async function handleEnter() {
     }
 
     if (selectedSection.action === "reload") {
-      await reloadFromDisk();
+      reloadFromDisk();
       return;
     }
 
     if (selectedSection.action === "discard") {
-      await discardQueuedChanges();
+      discardQueuedChanges();
       return;
     }
 
@@ -486,12 +562,40 @@ async function handleEnter() {
 }
 
 readline.emitKeypressEvents(process.stdin);
-process.stdin.setRawMode(true);
+process.stdin.resume();
+if (process.stdin.isTTY) {
+  process.stdin.setRawMode(true);
+}
 
 process.stdin.on("keypress", async (_, key) => {
   if (key.ctrl && key.name === "c") {
     clearScreen();
     process.exit(0);
+  }
+
+  if (key.name?.toLowerCase() === "p") {
+    await applyQueuedChanges();
+    render();
+    return;
+  }
+
+  if (key.name?.toLowerCase() === "r") {
+    reloadFromDisk();
+    render();
+    return;
+  }
+
+  if (key.name?.toLowerCase() === "d") {
+    discardQueuedChanges();
+    render();
+    return;
+  }
+
+  if (STATE.mode === "fields" && key.name?.toLowerCase() === "b") {
+    STATE.mode = "sections";
+    STATE.selectedFieldIndex = 0;
+    render();
+    return;
   }
 
   if (STATE.mode === "sections") {
@@ -509,7 +613,7 @@ process.stdin.on("keypress", async (_, key) => {
       return;
     }
   } else {
-    const fieldMenuLength = 1 + sections[STATE.selectedSectionIndex].fields.length;
+    const fieldMenuLength = getFieldMenu(sections[STATE.selectedSectionIndex]).length;
 
     if (key.name === "up") {
       STATE.selectedFieldIndex =
@@ -528,12 +632,6 @@ process.stdin.on("keypress", async (_, key) => {
 
   if (key.name === "return") {
     await handleEnter();
-    render();
-    return;
-  }
-
-  if (key.name?.toLowerCase() === "r") {
-    await reloadFromDisk();
     render();
   }
 });
