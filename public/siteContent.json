@@ -1,0 +1,248 @@
+{
+  "hero": {
+    "badge": "Content Pipeline Dashboard",
+    "title": "My TikTok, Insta, and Twitch Content Pirepline",
+    "description": "Each valve-button opens a phase in your process. Replace the placeholder links with Notion pages, Trello boards, docs, folders, edit projects, or posting checklists."
+  },
+  "workflows": [
+    {
+      "id": "gaming",
+      "brand": "Bingus The Wizard",
+      "chapterLabel": "Bingus",
+      "handle": "@BingusTheWizard / @bingusthewizard.official",
+      "summary": "Capture stream moments, shape them into vertical clips, then ship them across Shorts, Reels, and TikTok.",
+      "workflowIcon": "Gamepad2",
+      "accentClass": "from-violet-500/90 to-fuchsia-500/90",
+      "glowClass": "shadow-[0_0_24px_rgba(168,85,247,0.12)]",
+      "stages": [
+        {
+          "id": "gaming-01",
+          "title": "Trend / Game Priority",
+          "description": "Open your game shortlist, trend notes, and clip-worthy formats.",
+          "url": "#replace-with-gaming-trend-doc",
+          "icon": "Search"
+        },
+        {
+          "id": "gaming-02",
+          "title": "Stream / Record Session",
+          "description": "Launch your stream setup, overlays, and recording checklist.",
+          "url": "#replace-with-stream-setup",
+          "icon": "PlaySquare"
+        },
+        {
+          "id": "gaming-03",
+          "title": "Review Raw Moments",
+          "description": "Open rough highlights, timestamps, and shortlist candidate clips.",
+          "url": "#replace-with-gaming-clip-bank",
+          "icon": "FolderOpen"
+        },
+        {
+          "id": "gaming-04",
+          "title": "Vertical Clip Edit",
+          "description": "Jump into your editing workspace for captions, crops, and pacing.",
+          "url": "#replace-with-gaming-edit-project",
+          "icon": "Wand2"
+        },
+        {
+          "id": "gaming-05",
+          "title": "Caption + Metadata",
+          "description": "Hook line, title, keywords, platform copy, and tags.",
+          "url": "#replace-with-gaming-copy-doc",
+          "icon": "Captions"
+        },
+        {
+          "id": "gaming-06",
+          "title": "Publish + Analytics",
+          "description": "Upload, schedule, and review retention / CTR / saves / shares.",
+          "url": "#replace-with-gaming-analytics-board",
+          "icon": "BarChart3"
+        }
+      ]
+    },
+    {
+      "id": "motion",
+      "brand": "GOOB VISION",
+      "chapterLabel": "GOOB VISION",
+      "handle": "@goobvision.scott / @goobvision-scott",
+      "summary": "Turn prior artwork and motion pieces into loops, process clips, breakdowns, and polished short-form posts.",
+      "workflowIcon": "Sparkles",
+      "accentClass": "from-cyan-400/90 to-sky-500/90",
+      "glowClass": "shadow-[0_0_24px_rgba(56,189,248,0.10)]",
+      "stages": [
+        {
+          "id": "motion-01",
+          "title": "Asset Pick / Theme",
+          "description": "Choose the artwork, motion loop, or breakdown concept to feature.",
+          "url": "#replace-with-goobvision-asset-bank",
+          "icon": "FolderOpen"
+        },
+        {
+          "id": "motion-02",
+          "title": "Hook / Framing",
+          "description": "Decide whether the post is a reveal, process, loop, or before/after.",
+          "url": "#replace-with-goobvision-hooks",
+          "icon": "Search"
+        },
+        {
+          "id": "motion-03",
+          "title": "Assemble / Animate",
+          "description": "Open the project file and move into build or cleanup mode.",
+          "url": "#replace-with-goobvision-projects",
+          "icon": "Wand2"
+        },
+        {
+          "id": "motion-04",
+          "title": "Sound / Sync",
+          "description": "Pair with approved audio, timing beats, or ambient design.",
+          "url": "#replace-with-goobvision-audio",
+          "icon": "Music4"
+        },
+        {
+          "id": "motion-05",
+          "title": "Export Variants",
+          "description": "Create TikTok / Reels / Shorts versions with correct sizing and burn-ins.",
+          "url": "#replace-with-goobvision-exports",
+          "icon": "Link"
+        },
+        {
+          "id": "motion-06",
+          "title": "Post + Review",
+          "description": "Publish and compare saves, watch time, comments, and follows.",
+          "url": "#replace-with-goobvision-analytics",
+          "icon": "BarChart3"
+        }
+      ]
+    },
+    {
+      "id": "film",
+      "brand": "GOOB Entertainment Co.",
+      "chapterLabel": "GOOB Ent.",
+      "handle": "@goobentertainmentco / @goobentertainmentco.official",
+      "summary": "Build cinematic or anime edits from idea to final post, with a dedicated progress lane for clip-by-clip edit status.",
+      "workflowIcon": "Clapperboard",
+      "accentClass": "from-amber-400/90 to-orange-500/90",
+      "glowClass": "shadow-[0_0_24px_rgba(251,146,60,0.10)]",
+      "stages": [
+        {
+          "id": "film-01",
+          "title": "Generate Clip Search Queries",
+          "description": "Open your prompt bank for search phrases, moods, and source targets.",
+          "url": "#replace-with-film-query-doc",
+          "icon": "Search"
+        },
+        {
+          "id": "film-02",
+          "title": "Source Intake",
+          "description": "Pull in locally owned, licensed, or otherwise authorized footage assets.",
+          "url": "#replace-with-film-source-folder",
+          "icon": "FolderOpen"
+        },
+        {
+          "id": "film-03",
+          "title": "Audio Selection",
+          "description": "Choose approved music / audio that you are licensed to use.",
+          "url": "#replace-with-film-audio-bank",
+          "icon": "Music4"
+        },
+        {
+          "id": "film-04",
+          "title": "Main Edit Project",
+          "description": "Open your edit timeline and asset bin for the current short.",
+          "url": "#replace-with-film-edit-project",
+          "icon": "Wand2"
+        },
+        {
+          "id": "film-05",
+          "title": "Kanban / Clip Progress",
+          "description": "Track Clip01 Edited, Clip02 Edited, export status, and ready-to-post state.",
+          "url": "#film-kanban",
+          "icon": "KanbanSquare"
+        },
+        {
+          "id": "film-06",
+          "title": "Caption + Publish",
+          "description": "Finalize copy, export, and platform uploads.",
+          "url": "#replace-with-film-publishing-board",
+          "icon": "Captions"
+        }
+      ]
+    }
+  ],
+  "filmKanban": {
+    "title": "GOOB Entertainment clip progress board",
+    "description": "This stores your checkbox state in local storage so the browser remembers progress.",
+    "columns": [
+      {
+        "id": "todo",
+        "title": "To Do",
+        "items": [
+          {
+            "id": "clip01",
+            "label": "Clip01 Edited"
+          },
+          {
+            "id": "clip02",
+            "label": "Clip02 Edited"
+          },
+          {
+            "id": "clip03",
+            "label": "Clip03 Edited"
+          }
+        ]
+      },
+      {
+        "id": "progress",
+        "title": "In Progress",
+        "items": [
+          {
+            "id": "clip04",
+            "label": "Clip04 Edited"
+          },
+          {
+            "id": "hook",
+            "label": "Hook / Intro Built"
+          },
+          {
+            "id": "audio",
+            "label": "Audio Synced"
+          }
+        ]
+      },
+      {
+        "id": "done",
+        "title": "Done / Ready",
+        "items": [
+          {
+            "id": "captions",
+            "label": "Captions Added"
+          },
+          {
+            "id": "export",
+            "label": "Exported 9:16"
+          },
+          {
+            "id": "upload",
+            "label": "Uploaded / Scheduled"
+          }
+        ]
+      }
+    ]
+  },
+  "footerCards": [
+    {
+      "id": "replace-links",
+      "title": "Replace the placeholder links",
+      "text": "Swap every placeholder URL with the real URL for your Notion pages, Trello boards, folders, docs, or published tools."
+    },
+    {
+      "id": "compliance",
+      "title": "Keep it compliant",
+      "text": "Use footage, music, and assets you have rights to use so the dashboard stays useful instead of becoming a copyright mousetrap."
+    },
+    {
+      "id": "deploy",
+      "title": "Deploy path",
+      "text": "This project is configured for GitHub Pages through GitHub Actions."
+    }
+  ]
+}
