@@ -45,9 +45,9 @@ type Workflow = {
   chapterLabel: string;
   handle: string;
   summary: string;
-  workflowIcon: WorkflowIconKey;
-  accentClass: string;
   glowClass: string;
+  badgeClass: string;
+  workflowIcon: keyof typeof workflowIcons;
   stages: Stage[];
 };
 
@@ -105,15 +105,12 @@ function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
-type Workflow = SiteContent["workflows"][number];
-type WorkflowStage = Workflow["stages"][number];
-
 function WorkflowStageList({
   stages,
   completed,
   onToggle,
 }: {
-  stages: WorkflowStage[];
+  stages: Workflow["stages"];
   completed: Record<string, boolean>;
   onToggle: (stageId: string) => void;
 }) {
@@ -269,6 +266,12 @@ export default function App() {
 const [content, setContent] = useState<SiteContent | null>(null);
 const [loadError, setLoadError] = useState<string | null>(null);
 const [completed, setCompleted] = useState<Record<string, boolean>>({});
+const toggleCompleted = (stageId: string) => {
+  setCompleted((prev) => ({
+    ...prev,
+    [stageId]: !prev[stageId],
+  }));
+};
 const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
 
 useEffect(() => {
@@ -339,7 +342,6 @@ useEffect(() => {
   let frameId = 0;
 
   const computeActiveWorkflow = () => {
-	const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
     const focusY = window.innerHeight * 0.38;
     let bestId = content.workflows[0]?.id ?? null;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -456,17 +458,18 @@ useEffect(() => {
             Chapters
           </div>
 
-          <div className="mt-3 space-y-2">
-            {content.workflows.map((workflow) => (
-              <a
-                key={workflow.id}
-                href={`#workflow-${workflow.id}`}
-                className="block rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-200 transition hover:bg-white/10"
-              >
-                {workflow.chapterLabel}
-              </a>
-            ))}
-          </div>
+			<div className="space-y-16">
+			  {content.workflows.map((workflow, workflowIndex) => (
+				<WorkflowRow
+				  key={workflow.id}
+				  workflow={workflow}
+				  workflowIndex={workflowIndex}
+				  completed={completed}
+				  onToggleStage={toggleCompleted}
+				  isActive={activeWorkflowId === null || activeWorkflowId === workflow.id}
+				/>
+			  ))}
+			</div>
         </div>
       </nav>
 
@@ -544,7 +547,7 @@ useEffect(() => {
                           <div
                             className={cn(
                               "inline-flex items-center gap-2 rounded-full bg-gradient-to-r px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white",
-                              workflow.accentClass,
+                              workflow.badgeClass,
                             )}
                           >
                             <WorkflowIcon className="h-4 w-4" />
