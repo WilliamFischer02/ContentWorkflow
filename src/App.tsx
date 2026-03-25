@@ -1,9 +1,7 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   Captions,
-  CheckCircle2,
-  ChevronDown,
   Circle,
   Clapperboard,
   ExternalLink,
@@ -13,23 +11,33 @@ import {
   Link as LinkIcon,
   Music4,
   PlaySquare,
-  RefreshCcw,
   Search,
   Sparkles,
   Wand2,
 } from "lucide-react";
 
-type WorkflowIconKey = "Gamepad2" | "Sparkles" | "Clapperboard";
-type StageIconKey =
-  | "Search"
-  | "PlaySquare"
-  | "FolderOpen"
-  | "Wand2"
-  | "Captions"
-  | "BarChart3"
-  | "Music4"
-  | "Link"
-  | "KanbanSquare";
+const STORAGE_KEY = "workflow-pipeline-progress-v2";
+
+const workflowIcons = {
+  Gamepad2,
+  Sparkles,
+  Clapperboard,
+} as const;
+
+const stageIcons = {
+  Search,
+  PlaySquare,
+  FolderOpen,
+  Wand2,
+  Captions,
+  BarChart3,
+  Music4,
+  Link: LinkIcon,
+  KanbanSquare,
+} as const;
+
+type WorkflowIconKey = keyof typeof workflowIcons;
+type StageIconKey = keyof typeof stageIcons;
 
 type Stage = {
   id: string;
@@ -45,21 +53,21 @@ type Workflow = {
   chapterLabel: string;
   handle: string;
   summary: string;
+  workflowIcon: WorkflowIconKey;
+  accentClass: string;
   glowClass: string;
-  badgeClass: string;
-  workflowIcon: keyof typeof workflowIcons;
   stages: Stage[];
 };
 
-type KanbanItem = {
+type FilmKanbanItem = {
   id: string;
   label: string;
 };
 
-type KanbanColumn = {
+type FilmKanbanColumn = {
   id: string;
   title: string;
-  items: KanbanItem[];
+  items: FilmKanbanItem[];
 };
 
 type SiteContent = {
@@ -72,37 +80,17 @@ type SiteContent = {
   filmKanban: {
     title: string;
     description: string;
-    columns: KanbanColumn[];
+    columns: FilmKanbanColumn[];
   };
-  footerCards: Array<{
+  footerCards: {
     id: string;
     title: string;
     text: string;
-  }>;
+  }[];
 };
 
-const STORAGE_KEY = "contentworkflow-progress-v4";
-
-const workflowIcons: Record<WorkflowIconKey, React.ComponentType<{ className?: string }>> = {
-  Gamepad2,
-  Sparkles,
-  Clapperboard,
-};
-
-const stageIcons: Record<StageIconKey, React.ComponentType<{ className?: string }>> = {
-  Search,
-  PlaySquare,
-  FolderOpen,
-  Wand2,
-  Captions,
-  BarChart3,
-  Music4,
-  Link: LinkIcon,
-  KanbanSquare,
-};
-
-function cn(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(" ");
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
 }
 
 function WorkflowStageList({
@@ -110,14 +98,14 @@ function WorkflowStageList({
   completed,
   onToggle,
 }: {
-  stages: Workflow["stages"];
+  stages: Stage[];
   completed: Record<string, boolean>;
   onToggle: (stageId: string) => void;
 }) {
   return (
     <div className="mt-5 space-y-3">
       {stages.map((stage, index) => {
-        const StageIcon = stageIcons[stage.icon];
+        const StageIcon = stageIcons[stage.icon] ?? LinkIcon;
         const isDone = !!completed[stage.id];
         const isFirst = index === 0;
         const isLast = index === stages.length - 1;
@@ -166,9 +154,7 @@ function WorkflowStageList({
                   <h4 className="text-[1.02rem] font-semibold text-white">
                     {stage.title}
                   </h4>
-                  <span className="shrink-0 text-sm text-white/45 transition group-hover:text-white/75">
-                    ↗
-                  </span>
+                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-white/45 transition group-hover:text-white/75" />
                 </div>
 
                 <p className="mt-1.5 text-sm leading-6 text-white/60">
@@ -196,7 +182,7 @@ function WorkflowRow({
   onToggleStage: (stageId: string) => void;
   isActive: boolean;
 }) {
-  const WorkflowIcon = workflowIcons[workflow.workflowIcon];
+  const WorkflowIcon = workflowIcons[workflow.workflowIcon] ?? Sparkles;
   const alignLeft = workflowIndex % 2 === 0;
 
   const card = (
@@ -211,8 +197,8 @@ function WorkflowRow({
     >
       <div
         className={cn(
-          "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-white shadow-[0_0_24px_rgba(255,255,255,0.06)]",
-          workflow.badgeClass
+          "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-white shadow-[0_0_24px_rgba(255,255,255,0.06)] bg-gradient-to-r",
+          workflow.accentClass
         )}
       >
         <WorkflowIcon className="h-3.5 w-3.5" />
@@ -231,10 +217,7 @@ function WorkflowRow({
   );
 
   return (
-    <section
-      id={`workflow-${workflow.id}`}
-      className="relative"
-    >
+    <section id={`workflow-${workflow.id}`} className="relative">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(340px,560px)_88px_minmax(340px,560px)] md:items-start">
         {alignLeft ? card : <div className="hidden md:block" />}
 
@@ -263,172 +246,149 @@ function WorkflowRow({
 }
 
 export default function App() {
-const [content, setContent] = useState<SiteContent | null>(null);
-const [loadError, setLoadError] = useState<string | null>(null);
-const [completed, setCompleted] = useState<Record<string, boolean>>({});
-const toggleCompleted = (stageId: string) => {
-  setCompleted((prev) => ({
-    ...prev,
-    [stageId]: !prev[stageId],
-  }));
-};
-const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
+  const [content, setContent] = useState<SiteContent | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState<Record<string, boolean>>({});
+  const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
 
-useEffect(() => {
-  let isMounted = true;
-
-  async function loadContent() {
-    try {
-      const cacheBustUrl = `${import.meta.env.BASE_URL}siteContent.json?v=${Date.now()}`;
-
-      const res = await fetch(cacheBustUrl, {
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to load site content (${res.status})`);
-      }
-
-      const data = (await res.json()) as SiteContent;
-
-      if (isMounted) {
-        setContent(data);
-        setLoadError(null);
-      }
-    } catch (err) {
-      if (isMounted) {
-        setLoadError(err instanceof Error ? err.message : "Unknown load error");
-      }
-    }
-  }
-
-  function handleVisibilityOrFocus() {
-    if (document.visibilityState === "visible") {
-      void loadContent();
-    }
-  }
-
-  void loadContent();
-
-  const intervalId = window.setInterval(() => {
-    void loadContent();
-  }, 20000);
-
-  window.addEventListener("focus", handleVisibilityOrFocus);
-  document.addEventListener("visibilitychange", handleVisibilityOrFocus);
-
-  return () => {
-    isMounted = false;
-    window.clearInterval(intervalId);
-    window.removeEventListener("focus", handleVisibilityOrFocus);
-    document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+  const toggleCompleted = (stageId: string) => {
+    setCompleted((prev) => ({
+      ...prev,
+      [stageId]: !prev[stageId],
+    }));
   };
-}, []);
 
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        setCompleted(JSON.parse(raw) as Record<string, boolean>);
+        setCompleted(JSON.parse(raw));
       }
     } catch {
-      // Ignore storage read errors
+      // ignore localStorage issues
     }
   }, []);
-  
-  useEffect(() => {
-  if (!content?.workflows?.length) return;
-
-  let frameId = 0;
-
-  const computeActiveWorkflow = () => {
-    const focusY = window.innerHeight * 0.38;
-    let bestId = content.workflows[0]?.id ?? null;
-    let bestDistance = Number.POSITIVE_INFINITY;
-
-    for (const workflow of content.workflows) {
-      const el = document.getElementById(`workflow-${workflow.id}`);
-      if (!el) continue;
-
-      const rect = el.getBoundingClientRect();
-      const centerY = rect.top + rect.height / 2;
-      const distance = Math.abs(centerY - focusY);
-
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestId = workflow.id;
-      }
-    }
-
-    setActiveWorkflowId((prev) => (prev === bestId ? prev : bestId));
-  };
-
-  const onScrollOrResize = () => {
-    window.cancelAnimationFrame(frameId);
-    frameId = window.requestAnimationFrame(computeActiveWorkflow);
-  };
-
-  computeActiveWorkflow();
-
-  window.addEventListener("scroll", onScrollOrResize, { passive: true });
-  window.addEventListener("resize", onScrollOrResize);
-
-  return () => {
-    window.cancelAnimationFrame(frameId);
-    window.removeEventListener("scroll", onScrollOrResize);
-    window.removeEventListener("resize", onScrollOrResize);
-  };
-}, [content]);
 
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
     } catch {
-      // Ignore storage write errors
+      // ignore localStorage issues
     }
   }, [completed]);
 
-  const stageProgress = useMemo(() => {
-    if (!content) return { done: 0, total: 0 };
+  useEffect(() => {
+    let isMounted = true;
 
-    const ids = content.workflows.flatMap((workflow) =>
-      workflow.stages.map((stage) => stage.id),
-    );
+    async function loadContent() {
+      try {
+        const url = `${import.meta.env.BASE_URL}siteContent.json?v=${Date.now()}`;
+        const res = await fetch(url, { cache: "no-store" });
 
-    return {
-      done: ids.filter((id) => completed[id]).length,
-      total: ids.length,
+        if (!res.ok) {
+          throw new Error(`Failed to load site content (${res.status})`);
+        }
+
+        const data = (await res.json()) as SiteContent;
+
+        if (isMounted) {
+          setContent(data);
+          setLoadError(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setLoadError(err instanceof Error ? err.message : "Unknown load error");
+        }
+      }
+    }
+
+    function refreshVisible() {
+      if (document.visibilityState === "visible") {
+        void loadContent();
+      }
+    }
+
+    void loadContent();
+
+    const intervalId = window.setInterval(() => {
+      void loadContent();
+    }, 20000);
+
+    window.addEventListener("focus", refreshVisible);
+    document.addEventListener("visibilitychange", refreshVisible);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshVisible);
+      document.removeEventListener("visibilitychange", refreshVisible);
     };
+  }, []);
+
+  useEffect(() => {
+    if (!content?.workflows?.length) return;
+
+    let frameId = 0;
+
+    const computeActiveWorkflow = () => {
+      const focusY = window.innerHeight * 0.34;
+      let bestId = content.workflows[0]?.id ?? null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      for (const workflow of content.workflows) {
+        const el = document.getElementById(`workflow-${workflow.id}`);
+        if (!el) continue;
+
+        const rect = el.getBoundingClientRect();
+        const centerY = rect.top + rect.height / 2;
+        const distance = Math.abs(centerY - focusY);
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestId = workflow.id;
+        }
+      }
+
+      setActiveWorkflowId((prev) => (prev === bestId ? prev : bestId));
+    };
+
+    const onScrollOrResize = () => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(computeActiveWorkflow);
+    };
+
+    computeActiveWorkflow();
+
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [content]);
+
+  const totals = useMemo(() => {
+    const allIds = content?.workflows.flatMap((w) => w.stages.map((s) => s.id)) ?? [];
+    const done = allIds.filter((id) => completed[id]).length;
+    return { done, total: allIds.length };
   }, [content, completed]);
 
-  const kanbanProgress = useMemo(() => {
-    if (!content) return { done: 0, total: 0 };
-
-    const kanbanIds = content.filmKanban.columns.flatMap((column) =>
-      column.items.map((item) => `kanban-${item.id}`),
+  const kanbanDone = useMemo(() => {
+    if (!content) return 0;
+    const allKanbanIds = content.filmKanban.columns.flatMap((column) =>
+      column.items.map((item) => `kanban-${item.id}`)
     );
-
-    return {
-      done: kanbanIds.filter((id) => completed[id]).length,
-      total: kanbanIds.length,
-    };
+    return allKanbanIds.filter((id) => completed[id]).length;
   }, [content, completed]);
-
-  function toggleItem(id: string) {
-    setCompleted((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
-  function resetAll() {
-    setCompleted({});
-  }
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-neutral-950 px-6 py-12 text-neutral-100">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-red-500/20 bg-red-500/10 p-6">
-          <div className="text-sm uppercase tracking-[0.2em] text-red-300">Load Error</div>
-          <h1 className="mt-3 text-2xl font-semibold">The dashboard content failed to load.</h1>
-          <p className="mt-3 text-sm leading-6 text-neutral-300">{loadError}</p>
+      <div className="min-h-screen bg-black px-6 py-20 text-white">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-red-500/20 bg-red-500/10 p-6">
+          <h1 className="text-2xl font-semibold">ContentWorkflow failed to load</h1>
+          <p className="mt-3 text-white/70">{loadError}</p>
         </div>
       </div>
     );
@@ -436,311 +396,144 @@ useEffect(() => {
 
   if (!content) {
     return (
-      <div className="min-h-screen bg-neutral-950 px-6 py-12 text-neutral-100">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-          <div className="text-sm uppercase tracking-[0.2em] text-neutral-400">
-            Loading Dashboard
-          </div>
-          <h1 className="mt-3 text-2xl font-semibold">Preparing workflow interface…</h1>
+      <div className="min-h-screen bg-black px-6 py-20 text-white">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-6">
+          <p className="text-white/70">Loading ContentWorkflow…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_35%),linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_20%,transparent_80%,rgba(255,255,255,0.03))]" />
-      <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:40px_40px]" />
-
-      <nav className="fixed right-4 top-1/2 z-50 hidden -translate-y-1/2 2xl:block">
-        <div className="rounded-[1.5rem] border border-white/10 bg-black/55 p-3 shadow-2xl backdrop-blur-xl">
-          <div className="px-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-neutral-400">
-            Chapters
-          </div>
-
-			<div className="space-y-16">
-			  {content.workflows.map((workflow, workflowIndex) => (
-				<WorkflowRow
-				  key={workflow.id}
-				  workflow={workflow}
-				  workflowIndex={workflowIndex}
-				  completed={completed}
-				  onToggleStage={toggleCompleted}
-				  isActive={activeWorkflowId === null || activeWorkflowId === workflow.id}
-				/>
-			  ))}
-			</div>
-        </div>
-      </nav>
-
-      <main className="relative mx-auto max-w-[1520px] px-4 py-8 sm:px-6 lg:px-8">
-        <section className="mb-8 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-neutral-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+    <div className="min-h-screen bg-black text-white">
+      <div className="mx-auto max-w-[1400px] px-6 py-6 md:px-8">
+        <header className="rounded-[2rem] border border-white/10 bg-white/[0.04] px-6 py-6 shadow-[0_0_80px_rgba(255,255,255,0.04)] backdrop-blur-xl">
+          <div className="grid gap-6 md:grid-cols-[1fr_auto_auto] md:items-start">
+            <div>
+              <div className="inline-flex rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[0.64rem] uppercase tracking-[0.25em] text-white/65">
                 {content.hero.badge}
               </div>
-
-              <h1 className="text-3xl font-semibold leading-[0.95] tracking-tight sm:text-5xl">
+              <h1 className="mt-4 max-w-[700px] text-4xl font-semibold leading-tight md:text-5xl">
                 {content.hero.title}
               </h1>
-
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-neutral-300 sm:text-base">
+              <p className="mt-4 max-w-[700px] text-sm leading-7 text-white/65 md:text-base">
                 {content.hero.description}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.22em] text-neutral-400">
-                  Stage Progress
+            <div className="rounded-3xl border border-white/10 bg-black/35 px-5 py-4 text-center">
+              <div className="text-[0.62rem] uppercase tracking-[0.25em] text-white/45">
+                Stage Progress
+              </div>
+              <div className="mt-2 text-3xl font-semibold">
+                {totals.done} / {totals.total}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCompleted({})}
+              className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/[0.06]"
+            >
+              Reset Checks
+            </button>
+          </div>
+        </header>
+
+        <main className="mt-6 space-y-16">
+          {content.workflows.map((workflow, workflowIndex) => (
+            <WorkflowRow
+              key={workflow.id}
+              workflow={workflow}
+              workflowIndex={workflowIndex}
+              completed={completed}
+              onToggleStage={toggleCompleted}
+              isActive={activeWorkflowId === null || activeWorkflowId === workflow.id}
+            />
+          ))}
+
+          <section
+            id="film-kanban"
+            className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
+          >
+            <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-start">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[0.64rem] uppercase tracking-[0.25em] text-white/65">
+                  <KanbanSquare className="h-3.5 w-3.5" />
+                  Film Edit Mini-Kanban
                 </div>
-                <div className="mt-1 text-2xl font-semibold">
-                  {stageProgress.done} / {stageProgress.total}
-                </div>
+                <h2 className="mt-4 text-3xl font-semibold">{content.filmKanban.title}</h2>
+                <p className="mt-3 max-w-[760px] text-sm leading-7 text-white/65">
+                  {content.filmKanban.description}
+                </p>
               </div>
 
-              <button
-                onClick={resetAll}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-neutral-100 transition hover:bg-white/10"
-              >
-                <RefreshCcw className="h-4 w-4" />
-                Reset Checks
-              </button>
+              <div className="rounded-3xl border border-white/10 bg-black/35 px-5 py-4 text-center">
+                <div className="text-[0.62rem] uppercase tracking-[0.25em] text-white/45">
+                  Kanban Progress
+                </div>
+                <div className="mt-2 text-3xl font-semibold">
+                  {kanbanDone} /{" "}
+                  {content.filmKanban.columns.flatMap((column) => column.items).length}
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
 
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-black/30 p-4 sm:p-6">
-          <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-4 -translate-x-1/2 rounded-full bg-gradient-to-b from-white/12 via-white/4 to-white/12 opacity-80 md:block" />
-          <div className="pointer-events-none absolute left-1/2 top-6 hidden h-16 w-16 -translate-x-1/2 rounded-full border border-white/10 bg-neutral-900 md:grid place-items-center">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-b from-neutral-200/20 to-neutral-500/10" />
-          </div>
-
-          <div className="space-y-16 pt-10 md:pt-24">
-            {content.workflows.map((workflow, workflowIndex) => {
-              const WorkflowIcon = workflowIcons[workflow.workflowIcon];
-			  const alignLeft = workflowIndex % 2 === 0;
-			  const isActive = activeWorkflowId === null || activeWorkflowId === workflow.id;
-
-              return (
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {content.filmKanban.columns.map((column) => (
                 <div
-                  key={workflow.id}
-                  id={`workflow-${workflow.id}`}
-                  className="scroll-mt-28"
+                  key={column.id}
+                  className="rounded-[1.75rem] border border-white/10 bg-black/30 p-4"
                 >
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(320px,540px)_96px_minmax(320px,540px)] md:items-start md:justify-between">
-                    <div
-                      className={cn(
-                        alignLeft ? "md:col-start-1" : "md:col-start-3",
-                      )}
-                    >
-                      <div
-						  className={cn(
-							"rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition duration-500",
-							workflow.glowClass,
-							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-72 saturate-80 grayscale-[0.08]",
-						  )}
-						>
-                        <div>
-                          <div
-                            className={cn(
-                              "inline-flex items-center gap-2 rounded-full bg-gradient-to-r px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white",
-                              workflow.badgeClass,
-                            )}
-                          >
-                            <WorkflowIcon className="h-4 w-4" />
-                            {workflow.brand}
-                          </div>
+                  <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-white/65">
+                    {column.title}
+                  </h3>
 
-                          <div className="mt-3 text-sm text-neutral-400">{workflow.handle}</div>
+                  <div className="mt-4 space-y-3">
+                    {column.items.map((item) => {
+                      const id = `kanban-${item.id}`;
+                      const isDone = !!completed[id];
 
-                          <p className="mt-3 max-w-xl text-[13px] leading-6 text-neutral-300/90">
-                            {workflow.summary}
-                          </p>
-                        </div>
-
-                        <div className="mt-6 space-y-3">
-                          {workflow.stages.map((stage, stageIndex) => {
-                            const StageIcon = stageIcons[stage.icon];
-                            const isDone = !!completed[stage.id];
-                            const isLast = stageIndex === workflow.stages.length - 1;
-
-                            return (
-                              <div
-                                key={stage.id}
-                                className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-4"
-                              >
-                                <div className="relative flex min-h-[88px] justify-center pt-1">
-                                  {!isLast && (
-                                    <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/14" />
-                                  )}
-
-                                  <button
-                                    onClick={() => toggleItem(stage.id)}
-                                    className="relative z-10 rounded-full bg-neutral-950 text-neutral-300 transition hover:text-white"
-                                    aria-label={`Toggle ${stage.title}`}
-                                    title={`Toggle ${stage.title}`}
-                                  >
-                                    {isDone ? (
-                                      <CheckCircle2 className="h-6 w-6 text-emerald-400" />
-                                    ) : (
-                                      <Circle className="h-6 w-6" />
-                                    )}
-                                  </button>
-                                </div>
-
-                                <a
-                                  href={stage.url}
-                                  className={cn(
-                                    "group rounded-2xl border px-4 py-4 transition",
-                                    isDone
-                                      ? "border-emerald-400/30 bg-emerald-400/10"
-                                      : "border-white/10 bg-white/5 hover:bg-white/10",
-                                  )}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-black/25">
-                                      <StageIcon className="h-4 w-4" />
-                                    </div>
-
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="text-[14px] font-semibold leading-5 text-white">
-                                          {stage.title}
-                                        </div>
-                                        <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400 transition group-hover:text-white" />
-                                      </div>
-
-                                      <div className="mt-1 text-[12px] leading-5 text-neutral-400">
-                                        {stage.description}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </a>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                      <div className="relative hidden min-h-0 md:flex md:self-start md:justify-center">
-                      <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/12" />
-                      <div
-						  className={cn(
-							"relative z-10 mt-8 grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-gradient-to-b from-neutral-100/10 to-neutral-700/10 transition duration-500",
-							workflow.glowClass,
-							isActive ? "opacity-100 saturate-100 grayscale-0" : "opacity-70 saturate-80 grayscale-[0.08]",
-						  )}
-						>
-						
-                        <WorkflowIcon className="h-6 w-6 text-white" />
-                      </div>
-                    </div>
-
-                    <div
-                      className={cn(
-                        "hidden md:block",
-                        alignLeft ? "md:col-start-3" : "md:col-start-1",
-                      )}
-                    />
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => toggleCompleted(id)}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition",
+                            isDone
+                              ? "border-emerald-400/30 bg-emerald-400/10"
+                              : "border-white/10 bg-white/5 hover:bg-white/10"
+                          )}
+                        >
+                          {isDone ? (
+                            <Circle className="h-4 w-4 fill-white text-white" />
+                          ) : (
+                            <Circle className="h-4 w-4 text-white/70" />
+                          )}
+                          <span className="text-sm text-white/80">{item.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-
-                  {workflowIndex < content.workflows.length - 1 && (
-                    <div className="mt-5 hidden justify-center md:flex text-neutral-500">
-                      <ChevronDown className="h-5 w-5 animate-bounce" />
-                    </div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section
-          id="film-kanban"
-          className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
-        >
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.25em] text-neutral-300">
-                <KanbanSquare className="h-4 w-4" />
-                Film Edit Mini-Kanban
-              </div>
-
-              <h2 className="mt-3 text-2xl font-semibold">{content.filmKanban.title}</h2>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
-                {content.filmKanban.description}
-              </p>
+              ))}
             </div>
+          </section>
 
-            <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.22em] text-neutral-400">
-                Kanban Progress
-              </div>
-              <div className="mt-1 text-2xl font-semibold">
-                {kanbanProgress.done} / {kanbanProgress.total}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {content.filmKanban.columns.map((column) => (
+          <section className="grid gap-4 md:grid-cols-3">
+            {content.footerCards.map((card) => (
               <div
-                key={column.id}
-                className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4"
+                key={card.id}
+                className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl"
               >
-                <div className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-neutral-300">
-                  {column.title}
-                </div>
-
-                <div className="space-y-3">
-                  {column.items.map((item) => {
-                    const checkboxId = `kanban-${item.id}`;
-                    const isDone = !!completed[checkboxId];
-
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => toggleItem(checkboxId)}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition",
-                          isDone
-                            ? "border-emerald-400/30 bg-emerald-400/10"
-                            : "border-white/10 bg-white/5 hover:bg-white/10",
-                        )}
-                      >
-                        {isDone ? (
-                          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
-                        ) : (
-                          <Circle className="h-5 w-5 shrink-0 text-neutral-400" />
-                        )}
-
-                        <span className="text-sm text-neutral-100">{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <h3 className="text-lg font-semibold">{card.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-white/65">{card.text}</p>
               </div>
             ))}
-          </div>
-        </section>
-
-        <section className="mt-8 grid gap-4 lg:grid-cols-3">
-          {content.footerCards.map((card) => (
-            <div
-              key={card.id}
-              className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
-            >
-              <div className="text-lg font-semibold">{card.title}</div>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{card.text}</p>
-            </div>
-          ))}
-        </section>
-      </main>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }
