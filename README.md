@@ -12,7 +12,7 @@ A webpage for guiding the user step-by-step through their content creation pipel
 
 ## PowerShell Quick Start
 
-From the repo root:
+Open the editor:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
