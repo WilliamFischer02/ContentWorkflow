@@ -39,6 +39,8 @@ const stageIcons = {
 type WorkflowIconKey = keyof typeof workflowIcons;
 type StageIconKey = keyof typeof stageIcons;
 
+type WorkflowStatus = "untouched" | "partial" | "complete";
+
 type Stage = {
   id: string;
   title: string;
@@ -175,26 +177,35 @@ function WorkflowRow({
   completed,
   onToggleStage,
   isActive,
+  status,
 }: {
   workflow: Workflow;
   workflowIndex: number;
   completed: Record<string, boolean>;
   onToggleStage: (stageId: string) => void;
   isActive: boolean;
+  status: WorkflowStatus;
 }) {
   const WorkflowIcon = workflowIcons[workflow.workflowIcon] ?? Sparkles;
   const alignLeft = workflowIndex % 2 === 0;
+  const statusTintClass =
+	 status === "complete"
+	  ? "border-emerald-500/20 bg-emerald-950/28 shadow-[0_0_55px_rgba(16,185,129,0.10)]"
+	  : status === "partial"
+	  ? "border-amber-400/18 bg-amber-950/22 shadow-[0_0_48px_rgba(245,158,11,0.08)]"
+	  : "border-rose-500/16 bg-rose-950/18 shadow-[0_0_38px_rgba(244,63,94,0.07)]";
 
   const card = (
     <div
-      className={cn(
-        "rounded-[2rem] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl transition-all duration-500",
-        workflow.glowClass,
-        isActive
-          ? "opacity-100 saturate-100 grayscale-0"
-          : "opacity-55 saturate-75 grayscale-[0.12]"
-      )}
-    >
+	  className={cn(
+		"group rounded-[2rem] p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:border-white/18",
+		statusTintClass,
+		workflow.glowClass,
+		isActive
+		  ? "opacity-100 saturate-100 grayscale-0"
+		  : "opacity-62 saturate-80 grayscale-[0.10]"
+	  )}
+	>
       <div
         className={cn(
           "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-white shadow-[0_0_24px_rgba(255,255,255,0.06)] bg-gradient-to-r",
@@ -256,6 +267,38 @@ export default function App() {
       [stageId]: !prev[stageId],
     }));
   };
+	const getWorkflowStats = (workflow: Workflow) => {
+	  const total = workflow.stages.length;
+	  const done = workflow.stages.filter((stage) => completed[stage.id]).length;
+
+	  let status: WorkflowStatus = "untouched";
+	  if (done === total && total > 0) status = "complete";
+	  else if (done > 0) status = "partial";
+
+	  return {
+		done,
+		total,
+		ratio: total > 0 ? done / total : 0,
+		status,
+	  };
+	};
+
+	const workflowSnapshots = useMemo(() => {
+	  if (!content) return [];
+	  return content.workflows.map((workflow) => ({
+		id: workflow.id,
+		...getWorkflowStats(workflow),
+	  }));
+	}, [content, completed]);
+
+	const completedWorkflowCount = workflowSnapshots.filter(
+	  (workflow) => workflow.status === "complete"
+	).length;
+
+	const pipeFillPercent =
+	  content?.workflows?.length && completedWorkflowCount > 0
+		? Math.max((completedWorkflowCount / content.workflows.length) * 100, 7)
+		: 0;
 
   useEffect(() => {
     try {
@@ -404,7 +447,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="app-shell min-h-screen bg-black text-white">
       <div className="mx-auto max-w-[1400px] px-6 py-6 md:px-8">
         <header className="rounded-[2rem] border border-white/10 bg-white/[0.04] px-6 py-6 shadow-[0_0_80px_rgba(255,255,255,0.04)] backdrop-blur-xl">
           <div className="grid gap-6 md:grid-cols-[1fr_auto_auto] md:items-start">
@@ -441,19 +484,38 @@ export default function App() {
 
         <main className="mt-6 space-y-16">
 		  <div className="relative">
-			<div className="pointer-events-none absolute left-1/2 top-10 bottom-10 hidden w-px -translate-x-1/2 bg-white/12 shadow-[0_0_18px_rgba(255,255,255,0.04)] md:block" />
+			  <div className="pointer-events-none absolute left-1/2 top-10 bottom-10 hidden -translate-x-1/2 md:block">
+				<div className="absolute inset-y-0 left-1/2 w-[18px] -translate-x-1/2 rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(214,214,216,0.22)_0%,rgba(135,139,148,0.18)_45%,rgba(64,68,76,0.24)_100%)] shadow-[inset_0_0_10px_rgba(255,255,255,0.10),0_0_24px_rgba(255,255,255,0.05)]" />
 
-			<div className="space-y-16">
-			  {content.workflows.map((workflow, workflowIndex) => (
-				<WorkflowRow
-				  key={workflow.id}
-				  workflow={workflow}
-				  workflowIndex={workflowIndex}
-				  completed={completed}
-				  onToggleStage={toggleCompleted}
-				  isActive={activeWorkflowId === null || activeWorkflowId === workflow.id}
+				<div
+				  className="animate-pipe-flow absolute left-1/2 top-0 w-[8px] -translate-x-1/2 rounded-full bg-[linear-gradient(180deg,rgba(125,211,252,0.95)_0%,rgba(59,130,246,0.88)_42%,rgba(14,165,233,0.98)_100%)] shadow-[0_0_18px_rgba(59,130,246,0.40)] transition-[height] duration-500"
+				  style={{ height: `${pipeFillPercent}%` }}
 				/>
-			  ))}
+
+				{pipeFillPercent > 0 ? (
+				  <div
+					className="animate-pipe-node absolute left-1/2 h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-sky-300/90 blur-[2px]"
+					style={{ top: `calc(${pipeFillPercent}% - 7px)` }}
+				  />
+				) : null}
+			  </div>
+
+			  <div className="space-y-16">
+			  {content.workflows.map((workflow, workflowIndex) => {
+				  const workflowState = getWorkflowStats(workflow);
+
+				  return (
+					<WorkflowRow
+					  key={workflow.id}
+					  workflow={workflow}
+					  workflowIndex={workflowIndex}
+					  completed={completed}
+					  onToggleStage={toggleCompleted}
+					  isActive={activeWorkflowId === null || activeWorkflowId === workflow.id}
+					  status={workflowState.status}
+					/>
+				  );
+				})}
 			</div>
 		  </div>
 

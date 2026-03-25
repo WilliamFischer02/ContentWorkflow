@@ -54,3 +54,81 @@ select {
   background: rgba(255, 255, 255, 0.16);
   color: white;
 }
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(41, 98, 255, 0.08), transparent 38%),
+    radial-gradient(circle at 82% 12%, rgba(0, 191, 255, 0.06), transparent 28%),
+    #040506;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.16;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.028) 0, transparent 1.2px),
+    radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.018) 0, transparent 1px),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.01) 0 1px,
+      transparent 1px 5px
+    );
+  background-size:
+    140px 140px,
+    180px 180px,
+    220px 220px,
+    260px 260px;
+  background-blend-mode: screen, screen, soft-light, soft-light;
+}
+
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes pipeFlow {
+  0% {
+    background-position: 0 0;
+    filter: brightness(0.98);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+  100% {
+    background-position: 0 150px;
+    filter: brightness(0.98);
+  }
+}
+
+@keyframes pipeNodePulse {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(0.92);
+    box-shadow: 0 0 10px rgba(125, 211, 252, 0.35);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.18);
+    box-shadow: 0 0 24px rgba(59, 130, 246, 0.55);
+  }
+}
+
+.animate-pipe-flow {
+  background-size: 100% 150px;
+  animation: pipeFlow 2.3s linear infinite;
+}
+
+.animate-pipe-node {
+  animation: pipeNodePulse 1.8s ease-in-out infinite;
+}
