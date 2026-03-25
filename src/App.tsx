@@ -222,12 +222,11 @@ function WorkflowRow({
         {alignLeft ? card : <div className="hidden md:block" />}
 
         <div className="relative hidden md:block">
-          <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/12" />
 
           <div className="relative flex justify-center pt-8">
             <div
               className={cn(
-                "relative z-10 flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-black/65 shadow-[0_0_30px_rgba(255,255,255,0.06)] transition-all duration-500",
+                "relative z-10 flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-black/80 shadow-[0_0_30px_rgba(255,255,255,0.08)] transition-all duration-500",
                 workflow.glowClass,
                 isActive
                   ? "opacity-100 saturate-100 grayscale-0 scale-100"
@@ -441,98 +440,103 @@ export default function App() {
         </header>
 
         <main className="mt-6 space-y-16">
-          {content.workflows.map((workflow, workflowIndex) => (
-            <WorkflowRow
-              key={workflow.id}
-              workflow={workflow}
-              workflowIndex={workflowIndex}
-              completed={completed}
-              onToggleStage={toggleCompleted}
-              isActive={activeWorkflowId === null || activeWorkflowId === workflow.id}
-            />
-          ))}
+		  <div className="relative">
+			<div className="pointer-events-none absolute left-1/2 top-10 bottom-10 hidden w-px -translate-x-1/2 bg-white/12 shadow-[0_0_18px_rgba(255,255,255,0.04)] md:block" />
 
-          <section
-            id="film-kanban"
-            className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
-          >
-            <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-start">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[0.64rem] uppercase tracking-[0.25em] text-white/65">
-                  <KanbanSquare className="h-3.5 w-3.5" />
-                  Film Edit Mini-Kanban
-                </div>
-                <h2 className="mt-4 text-3xl font-semibold">{content.filmKanban.title}</h2>
-                <p className="mt-3 max-w-[760px] text-sm leading-7 text-white/65">
-                  {content.filmKanban.description}
-                </p>
-              </div>
+			<div className="space-y-16">
+			  {content.workflows.map((workflow, workflowIndex) => (
+				<WorkflowRow
+				  key={workflow.id}
+				  workflow={workflow}
+				  workflowIndex={workflowIndex}
+				  completed={completed}
+				  onToggleStage={toggleCompleted}
+				  isActive={activeWorkflowId === null || activeWorkflowId === workflow.id}
+				/>
+			  ))}
+			</div>
+		  </div>
 
-              <div className="rounded-3xl border border-white/10 bg-black/35 px-5 py-4 text-center">
-                <div className="text-[0.62rem] uppercase tracking-[0.25em] text-white/45">
-                  Kanban Progress
-                </div>
-                <div className="mt-2 text-3xl font-semibold">
-                  {kanbanDone} /{" "}
-                  {content.filmKanban.columns.flatMap((column) => column.items).length}
-                </div>
-              </div>
-            </div>
+		  <section
+			id="film-kanban"
+			className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl"
+		  >
+			<div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-start">
+			  <div>
+				<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[0.64rem] uppercase tracking-[0.25em] text-white/65">
+				  <KanbanSquare className="h-3.5 w-3.5" />
+				  Film Edit Mini-Kanban
+				</div>
+				<h2 className="mt-4 text-3xl font-semibold">{content.filmKanban.title}</h2>
+				<p className="mt-3 max-w-[760px] text-sm leading-7 text-white/65">
+				  {content.filmKanban.description}
+				</p>
+			  </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {content.filmKanban.columns.map((column) => (
-                <div
-                  key={column.id}
-                  className="rounded-[1.75rem] border border-white/10 bg-black/30 p-4"
-                >
-                  <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-white/65">
-                    {column.title}
-                  </h3>
+			  <div className="rounded-3xl border border-white/10 bg-black/35 px-5 py-4 text-center">
+				<div className="text-[0.62rem] uppercase tracking-[0.25em] text-white/45">
+				  Kanban Progress
+				</div>
+				<div className="mt-2 text-3xl font-semibold">
+				  {kanbanDone} / {content.filmKanban.columns.flatMap((column) => column.items).length}
+				</div>
+			  </div>
+			</div>
 
-                  <div className="mt-4 space-y-3">
-                    {column.items.map((item) => {
-                      const id = `kanban-${item.id}`;
-                      const isDone = !!completed[id];
+			<div className="mt-6 grid gap-4 md:grid-cols-3">
+			  {content.filmKanban.columns.map((column) => (
+				<div
+				  key={column.id}
+				  className="rounded-[1.75rem] border border-white/10 bg-black/30 p-4"
+				>
+				  <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-white/65">
+					{column.title}
+				  </h3>
 
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => toggleCompleted(id)}
-                          className={cn(
-                            "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition",
-                            isDone
-                              ? "border-emerald-400/30 bg-emerald-400/10"
-                              : "border-white/10 bg-white/5 hover:bg-white/10"
-                          )}
-                        >
-                          {isDone ? (
-                            <Circle className="h-4 w-4 fill-white text-white" />
-                          ) : (
-                            <Circle className="h-4 w-4 text-white/70" />
-                          )}
-                          <span className="text-sm text-white/80">{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+				  <div className="mt-4 space-y-3">
+					{column.items.map((item) => {
+					  const id = `kanban-${item.id}`;
+					  const isDone = !!completed[id];
 
-          <section className="grid gap-4 md:grid-cols-3">
-            {content.footerCards.map((card) => (
-              <div
-                key={card.id}
-                className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl"
-              >
-                <h3 className="text-lg font-semibold">{card.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-white/65">{card.text}</p>
-              </div>
-            ))}
-          </section>
-        </main>
+					  return (
+						<button
+						  key={item.id}
+						  type="button"
+						  onClick={() => toggleCompleted(id)}
+						  className={cn(
+							"flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition",
+							isDone
+							  ? "border-emerald-400/30 bg-emerald-400/10"
+							  : "border-white/10 bg-white/5 hover:bg-white/10"
+						  )}
+						>
+						  {isDone ? (
+							<Circle className="h-4 w-4 fill-white text-white" />
+						  ) : (
+							<Circle className="h-4 w-4 text-white/70" />
+						  )}
+						  <span className="text-sm text-white/80">{item.label}</span>
+						</button>
+					  );
+					})}
+				  </div>
+				</div>
+			  ))}
+			</div>
+		  </section>
+
+		  <section className="grid gap-4 md:grid-cols-3">
+			{content.footerCards.map((card) => (
+			  <div
+				key={card.id}
+				className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl"
+			  >
+				<h3 className="text-lg font-semibold">{card.title}</h3>
+				<p className="mt-3 text-sm leading-7 text-white/65">{card.text}</p>
+			  </div>
+			))}
+		  </section>
+		</main>
       </div>
     </div>
   );
