@@ -26,7 +26,7 @@
           "id": "gaming-02",
           "title": "Stream Trending Game [Marathon]",
           "description": "Launch your stream setup, overlays, and recording checklist.",
-          "url": "#replace-with-stream-setup",
+          "url": "contentworkflow://obs?action=launch&scene=Starting%20Soon&profile=Bingus&collection=Bingus%20Scenes&record=1",
           "icon": "PlaySquare"
         },
         {
