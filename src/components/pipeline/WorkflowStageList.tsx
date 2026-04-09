@@ -15,7 +15,10 @@ export default function WorkflowStageList({ stages, completed, onToggle }: Workf
       {stages.map((stage, stageIndex) => {
         const completedAt = completed[stage.id];
         const isDone = typeof completedAt === "number";
-        const isPlaceholderLink = stage.href.startsWith("#replace-with-");
+        const isPlaceholderLink =
+          stage.href.startsWith("#replace-with-") ||
+          stage.href.startsWith("contentworkflow://") ||
+          stage.href === "#";
 
         return (
           <div key={stage.id} className="relative">

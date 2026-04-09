@@ -1,9 +1,9 @@
 # ContentWorkflow — Build Progress
 
-## Current Phase: 3 — Focus & Navigation UX
-## Current Task: 3.1 — "You Are Here" sticky banner
-## Status: TESTING
-## Last Updated: 2026-04-09T04:25:31Z
+## Current Phase: 5 — Mini Browser Pane
+## Current Task: 5.1 — Create browser state management
+## Status: IN_PROGRESS
+## Last Updated: 2026-04-09T05:26:34Z
 
 ---
 
@@ -29,23 +29,23 @@
 - [x] 2.6 — Timestamp completions + relative time utility
 
 ### Phase 3: Focus & Navigation UX
-- [ ] 3.1 — Add "You Are Here" sticky banner  ← CURRENT
+- [ ] 3.1 — Add "You Are Here" sticky banner
 - [ ] 3.2 — Add "Today's Focus" selector
 - [ ] 3.3 — Add accordion collapse for inactive workflows
 - [ ] 3.4 — Add keyboard navigation
 - [ ] 3.5 — Move kanban inline within film workflow
 
 ### Phase 4: Split-Pane Layout
-- [ ] 4.1 — Create useSplitPane hook
-- [ ] 4.2 — Create SplitPaneLayout component
-- [ ] 4.3 — Create CompactHeader component
-- [ ] 4.4 — Create PipelinePane component
-- [ ] 4.5 — Update App.tsx split-pane routing
-- [ ] 4.6 — Add split-pane toggle to headers
-- [ ] 4.7 — Add split-pane CSS rules
+- [x] 4.1 — Create useSplitPane hook
+- [x] 4.2 — Create SplitPaneLayout component
+- [x] 4.3 — Create CompactHeader component
+- [x] 4.4 — Create PipelinePane component
+- [x] 4.5 — Update App.tsx split-pane routing
+- [x] 4.6 — Add split-pane toggle to headers
+- [x] 4.7 — Add split-pane CSS rules
 
 ### Phase 5: Mini Browser Pane
-- [ ] 5.1 — Create browser state management
+- [ ] 5.1 — Create browser state management  ← CURRENT
 - [ ] 5.2 — Create BrowserTabBar
 - [ ] 5.3 — Create BrowserUrlBar
 - [ ] 5.4 — Create BrowserFrame

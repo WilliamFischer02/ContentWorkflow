@@ -15,11 +15,24 @@ import {
 import type { IconComponent, StageIconKey, WorkflowIconKey } from "./types";
 
 export const STORAGE_KEY = "workflow-pipeline-progress-v1";
+export const SPLIT_PANE_STORAGE_KEY = "split-pane-v1";
 
 export const workflowIcons: Record<WorkflowIconKey, IconComponent> = {
   gaming: Gamepad2,
   motion: Sparkles,
   film: Clapperboard,
+};
+
+export const workflowAccentBorder: Record<WorkflowIconKey, string> = {
+  gaming: "border-l-violet-500",
+  motion: "border-l-cyan-400",
+  film: "border-l-amber-400",
+};
+
+export const workflowAccentFill: Record<WorkflowIconKey, string> = {
+  gaming: "bg-violet-500",
+  motion: "bg-cyan-400",
+  film: "bg-amber-400",
 };
 
 export const stageIcons: Record<StageIconKey, IconComponent> = {
