@@ -22,3 +22,50 @@ body {
     "Segoe UI",
     sans-serif;
 }
+
+.pipeline-container {
+  container-type: inline-size;
+}
+
+.workflow-strip-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kanban-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@container (max-width: 600px) {
+  .workflow-strip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-strip-grid .strip-progress {
+    display: none;
+  }
+}
+
+@container (max-width: 500px) {
+  .kanban-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.split-divider {
+  cursor: col-resize;
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.2s;
+}
+
+.split-divider:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.split-divider:active {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.dragging-split * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
