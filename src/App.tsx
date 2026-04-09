@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   Captions,
@@ -309,7 +309,7 @@ export default function App() {
     } catch {
       // ignore localStorage issues
     }
-  }, []);
+  }, [content, selectedWorkflowId]);
 
   useEffect(() => {
     try {
@@ -317,7 +317,18 @@ export default function App() {
     } catch {
       // ignore localStorage issues
     }
-  }, [completed]);
+  }, [activeWorkflowElementId, content, query]);
+
+  const selectedWorkflow = useMemo(() => {
+    if (!content) return null;
+    return content.workflows.find((workflow) => workflow.id === selectedWorkflowId) ?? content.workflows[0];
+  }, [content, selectedWorkflowId]);
+
+  const filteredStages = useMemo(() => {
+    if (!selectedWorkflow) return [];
+
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return selectedWorkflow.stages;
 
   useEffect(() => {
     let isMounted = true;
