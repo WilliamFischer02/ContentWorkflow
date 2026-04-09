@@ -242,7 +242,10 @@ export default function App() {
           })}
         </section>
 
-        {selectedWorkflow && (
+        {selectedWorkflow && (() => {
+          const SelectedWorkflowIcon = workflowIcons[selectedWorkflow.icon];
+
+          return (
           <section className="mt-8 relative overflow-hidden rounded-[2rem] border border-white/10 bg-black/30 p-4 sm:p-6">
             <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-6 -translate-x-1/2 rounded-full bg-gradient-to-b from-white/15 via-white/5 to-white/15 md:block" />
 
@@ -276,10 +279,7 @@ export default function App() {
               <div className="relative hidden md:flex md:justify-center">
                 <div className="absolute top-6 h-full w-px bg-white/15" />
                 <div className={cn("relative z-10 mt-8 grid h-16 w-16 place-items-center rounded-full border border-white/15 bg-gradient-to-b from-neutral-100/10 to-neutral-700/10", selectedWorkflow.glow)}>
-                  {(() => {
-                    const Icon = workflowIcons[selectedWorkflow.icon];
-                    return <Icon className="h-7 w-7 text-white" />;
-                  })()}
+                  <SelectedWorkflowIcon className="h-7 w-7 text-white" />
                 </div>
               </div>
               <div className="hidden md:block md:col-start-3">
@@ -291,7 +291,8 @@ export default function App() {
               <ChevronDown className="h-6 w-6 animate-bounce" />
             </div>
           </section>
-        )}
+          );
+        })()}
 
         <section id="film-kanban" className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
