@@ -13,8 +13,13 @@ const DEFAULT_STATE: SplitPaneState = {
   leftWidthPercent: 42,
 };
 
-function clampWidth(value: number) {
-  return Math.max(25, Math.min(75, value));
+const MIN_LEFT_PX = 380;
+const MIN_RIGHT_PX = 300;
+
+function clampWidthByViewport(value: number, viewportWidth: number) {
+  const minLeftPercent = (MIN_LEFT_PX / viewportWidth) * 100;
+  const maxLeftPercent = ((viewportWidth - MIN_RIGHT_PX - 6) / viewportWidth) * 100;
+  return Math.min(Math.max(value, minLeftPercent), maxLeftPercent);
 }
 
 export function useSplitPane() {
@@ -25,13 +30,17 @@ export function useSplitPane() {
       const parsed = JSON.parse(raw) as PersistedState;
       return {
         enabled: !!parsed.enabled,
-        leftWidthPercent: clampWidth(parsed.leftWidthPercent ?? DEFAULT_STATE.leftWidthPercent),
+        leftWidthPercent: clampWidthByViewport(
+          parsed.leftWidthPercent ?? DEFAULT_STATE.leftWidthPercent,
+          window.innerWidth,
+        ),
       };
     } catch {
       return DEFAULT_STATE;
     }
   });
 
+  const [isDragging, setIsDragging] = useState(false);
   const draggingRef = useRef(false);
 
   useEffect(() => {
@@ -45,13 +54,14 @@ export function useSplitPane() {
   useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
       if (!draggingRef.current) return;
-      const nextWidth = clampWidth((event.clientX / window.innerWidth) * 100);
+      const nextWidth = clampWidthByViewport((event.clientX / window.innerWidth) * 100, window.innerWidth);
       setState((prev) => ({ ...prev, leftWidthPercent: nextWidth }));
     };
 
     const onMouseUp = () => {
       if (!draggingRef.current) return;
       draggingRef.current = false;
+      setIsDragging(false);
       document.body.classList.remove("dragging-split");
     };
 
@@ -67,16 +77,19 @@ export function useSplitPane() {
   const api = useMemo(
     () => ({
       state,
+      isDragging,
       toggle: () => setState((prev) => ({ ...prev, enabled: !prev.enabled })),
       setLeftWidth: (percent: number) =>
-        setState((prev) => ({ ...prev, leftWidthPercent: clampWidth(percent) })),
+        setState((prev) => ({ ...prev, leftWidthPercent: clampWidthByViewport(percent, window.innerWidth) })),
       onDragStart: () => {
         draggingRef.current = true;
+        setIsDragging(true);
         document.body.classList.add("dragging-split");
       },
-      resetWidth: () => setState((prev) => ({ ...prev, leftWidthPercent: 42 })),
+      resetWidth: () =>
+        setState((prev) => ({ ...prev, leftWidthPercent: clampWidthByViewport(42, window.innerWidth) })),
     }),
-    [state],
+    [isDragging, state],
   );
 
   return api;
