@@ -28,166 +28,6 @@ function getWorkflowProgress(stageIds: string[], completed: CompletedState) {
   };
 }
 
-function WorkflowStageList({
-  stages,
-  completed,
-  onToggle,
-}: {
-  stages: Stage[];
-  completed: Record<string, boolean>;
-  onToggle: (stageId: string) => void;
-}) {
-  return (
-    <div className="mt-5 space-y-3">
-      {stages.map((stage, index) => {
-        const StageIcon = stageIcons[stage.icon] ?? LinkIcon;
-        const isDone = !!completed[stage.id];
-        const isFirst = index === 0;
-        const isLast = index === stages.length - 1;
-
-        return (
-          <div
-            key={stage.id}
-            className="grid grid-cols-[26px_minmax(0,1fr)] items-start gap-4"
-          >
-            <div className="relative flex min-h-[88px] justify-center">
-              {!isFirst && (
-                <div className="absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 bg-white/12" />
-              )}
-              {!isLast && (
-                <div className="absolute left-1/2 top-8 bottom-0 w-px -translate-x-1/2 bg-white/12" />
-              )}
-
-              <button
-                type="button"
-                onClick={() => onToggle(stage.id)}
-                aria-label={`Toggle ${stage.title}`}
-                className={cn(
-                  "relative z-10 mt-2 h-5 w-5 rounded-full border transition",
-                  isDone
-                    ? "border-white/80 bg-white/80 shadow-[0_0_0_3px_rgba(255,255,255,0.08)]"
-                    : "border-white/70 bg-black/70 hover:border-white"
-                )}
-              />
-            </div>
-
-            <a
-              href={stage.url}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                "group flex min-h-[74px] items-start gap-4 rounded-3xl border border-white/10 bg-white/[0.045] px-5 py-4 transition duration-300 hover:border-white/20 hover:bg-white/[0.07]",
-                isDone && "border-white/20 bg-white/[0.08]"
-              )}
-            >
-              <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30">
-                <StageIcon className="h-5 w-5 text-white/90" />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <h4 className="text-[1.02rem] font-semibold text-white">
-                    {stage.title}
-                  </h4>
-                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-white/45 transition group-hover:text-white/75" />
-                </div>
-
-                <p className="mt-1.5 text-sm leading-6 text-white/60">
-                  {stage.description}
-                </p>
-              </div>
-            </a>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function WorkflowRow({
-  workflow,
-  workflowIndex,
-  completed,
-  onToggleStage,
-  isActive,
-  status,
-}: {
-  workflow: Workflow;
-  workflowIndex: number;
-  completed: Record<string, boolean>;
-  onToggleStage: (stageId: string) => void;
-  isActive: boolean;
-  status: WorkflowStatus;
-}) {
-  const WorkflowIcon = workflowIcons[workflow.workflowIcon] ?? Sparkles;
-  const alignLeft = workflowIndex % 2 === 0;
-  const statusTintClass =
-	 status === "complete"
-	  ? "border-emerald-500/20 bg-emerald-950/28 shadow-[0_0_55px_rgba(16,185,129,0.10)]"
-	  : status === "partial"
-	  ? "border-amber-400/18 bg-amber-950/22 shadow-[0_0_48px_rgba(245,158,11,0.08)]"
-	  : "border-rose-500/16 bg-rose-950/18 shadow-[0_0_38px_rgba(244,63,94,0.07)]";
-
-  const card = (
-    <div
-	  className={cn(
-		"group rounded-[2rem] p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:border-white/18",
-		statusTintClass,
-		workflow.glowClass,
-		isActive
-		  ? "opacity-100 saturate-100 grayscale-0"
-		  : "opacity-62 saturate-80 grayscale-[0.10]"
-	  )}
-	>
-      <div
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-white shadow-[0_0_24px_rgba(255,255,255,0.06)] bg-gradient-to-r",
-          workflow.accentClass
-        )}
-      >
-        <WorkflowIcon className="h-3.5 w-3.5" />
-        <span>{workflow.brand}</span>
-      </div>
-
-      <p className="mt-4 text-sm text-white/58">{workflow.handle}</p>
-      <p className="mt-4 text-[1rem] leading-8 text-white/80">{workflow.summary}</p>
-
-      <WorkflowStageList
-        stages={workflow.stages}
-        completed={completed}
-        onToggle={onToggleStage}
-      />
-    </div>
-  );
-
-  return (
-    <section id={`workflow-${workflow.id}`} className="relative">
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(340px,560px)_88px_minmax(340px,560px)] md:items-start">
-        {alignLeft ? card : <div className="hidden md:block" />}
-
-        <div className="relative hidden md:block">
-
-          <div className="relative flex justify-center pt-8">
-            <div
-              className={cn(
-                "relative z-10 flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-black/80 shadow-[0_0_30px_rgba(255,255,255,0.08)] transition-all duration-500",
-                workflow.glowClass,
-                isActive
-                  ? "opacity-100 saturate-100 grayscale-0 scale-100"
-                  : "opacity-65 saturate-75 grayscale-[0.12] scale-[0.96]"
-              )}
-            >
-              <WorkflowIcon className="h-5 w-5 text-white/90" />
-            </div>
-          </div>
-        </div>
-
-        {!alignLeft ? card : <div className="hidden md:block" />}
-      </div>
-    </section>
-  );
-}
-
 export default function App() {
   const { content, error } = useContentLoader();
   const [completed, setCompleted] = useLocalStorage<CompletedState>(STORAGE_KEY, {});
@@ -371,6 +211,8 @@ export default function App() {
                 </button>
               </div>
             </div>
+          </div>
+        </section>
 
         <section className="mt-8 grid gap-4 lg:grid-cols-3">
           {workflowProgress.map(({ workflow, progress }) => {
@@ -400,10 +242,7 @@ export default function App() {
           })}
         </section>
 
-        {selectedWorkflow && (() => {
-          const SelectedWorkflowIcon = workflowIcons[selectedWorkflow.icon];
-
-          return (
+        {selectedWorkflow && (
           <section className="mt-8 relative overflow-hidden rounded-[2rem] border border-white/10 bg-black/30 p-4 sm:p-6">
             <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-6 -translate-x-1/2 rounded-full bg-gradient-to-b from-white/15 via-white/5 to-white/15 md:block" />
 
@@ -437,7 +276,10 @@ export default function App() {
               <div className="relative hidden md:flex md:justify-center">
                 <div className="absolute top-6 h-full w-px bg-white/15" />
                 <div className={cn("relative z-10 mt-8 grid h-16 w-16 place-items-center rounded-full border border-white/15 bg-gradient-to-b from-neutral-100/10 to-neutral-700/10", selectedWorkflow.glow)}>
-                  <SelectedWorkflowIcon className="h-7 w-7 text-white" />
+                  {(() => {
+                    const SelectedWorkflowIcon = workflowIcons[selectedWorkflow.icon];
+                    return <SelectedWorkflowIcon className="h-7 w-7 text-white" />;
+                  })()}
                 </div>
               </div>
               <div className="hidden md:block md:col-start-3">
@@ -449,8 +291,7 @@ export default function App() {
               <ChevronDown className="h-6 w-6 animate-bounce" />
             </div>
           </section>
-          );
-        })()}
+        )}
 
         <section id="film-kanban" className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
