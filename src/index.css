@@ -22,3 +22,22 @@ body {
     "Segoe UI",
     sans-serif;
 }
+
+.split-divider {
+  cursor: col-resize;
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.2s;
+}
+
+.split-divider:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.split-divider:active {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.dragging-split * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
