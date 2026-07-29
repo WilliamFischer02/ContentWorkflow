@@ -1,31 +1,86 @@
 import Dexie, { type Table } from 'dexie'
-import type { ChecklistItem, ChecklistTemplate, Idea } from './types'
-import { buildDefaultTemplate } from './seed'
+import type {
+  AppSettings,
+  ChecklistItem,
+  ChecklistTemplate,
+  Idea,
+  TemplateStep,
+} from './types'
+import {
+  buildDefaultTemplate,
+  defaultSettings,
+  LEGACY_TIKTOK_UPLOAD_URL,
+  LEGACY_YOUTUBE_UPLOAD_URL,
+  TIKTOK_UPLOAD_URL,
+  YOUTUBE_UPLOAD_URL,
+} from './seed'
+
+const URL_MIGRATIONS: Record<string, string> = {
+  [LEGACY_YOUTUBE_UPLOAD_URL]: YOUTUBE_UPLOAD_URL,
+  [LEGACY_TIKTOK_UPLOAD_URL]: TIKTOK_UPLOAD_URL,
+}
 
 class ContentWorkflowDB extends Dexie {
   ideas!: Table<Idea, string>
   checklistTemplates!: Table<ChecklistTemplate, string>
   checklistItems!: Table<ChecklistItem, string>
+  settings!: Table<AppSettings, string>
 
   constructor() {
     super('ContentWorkflowDB')
 
-    // v1 — initial schema. Only indexed fields are listed; full objects
-    // (including embedded steps/links arrays) are stored as-is.
+    // v1 — initial schema.
     this.version(1).stores({
       ideas: 'id, status, createdAt, updatedAt',
       checklistTemplates: 'id, name',
       checklistItems: 'id, ideaId, [ideaId+order]',
     })
 
-    // Future migrations: bump the version and provide an upgrade callback, e.g.
-    // this.version(2)
-    //   .stores({ ideas: 'id, status, game, createdAt, updatedAt' })
-    //   .upgrade((tx) => tx.table('ideas').toCollection().modify((idea) => { ... }))
+    // v2 — priorities/due dates/tags on ideas, per-step notes, settings
+    // singleton, and migration of the v1 placeholder upload URLs to the
+    // real channel URLs.
+    this.version(2)
+      .stores({
+        ideas: 'id, status, priority, dueDate, createdAt, updatedAt',
+        checklistTemplates: 'id, name',
+        checklistItems: 'id, ideaId, [ideaId+order]',
+        settings: 'id',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<Idea>('ideas')
+          .toCollection()
+          .modify((idea) => {
+            idea.priority ??= 'none'
+            idea.tags ??= []
+          })
+        await tx
+          .table<ChecklistItem>('checklistItems')
+          .toCollection()
+          .modify((item) => {
+            item.note ??= ''
+            if (item.deepLinkUrl && URL_MIGRATIONS[item.deepLinkUrl]) {
+              item.deepLinkUrl = URL_MIGRATIONS[item.deepLinkUrl]
+            }
+          })
+        await tx
+          .table<ChecklistTemplate>('checklistTemplates')
+          .toCollection()
+          .modify((template) => {
+            template.steps = template.steps.map((step: TemplateStep) =>
+              step.deepLinkUrl && URL_MIGRATIONS[step.deepLinkUrl]
+                ? { ...step, deepLinkUrl: URL_MIGRATIONS[step.deepLinkUrl] }
+                : step,
+            )
+          })
+        await tx.table<AppSettings>('settings').put(defaultSettings())
+      })
 
-    // Seed the default template the first time the database is created.
+    // Seed on first run (fresh databases are created directly at the
+    // latest version, so both the template and settings go in here).
     this.on('populate', (tx) => {
       void tx.table('checklistTemplates').add(buildDefaultTemplate())
+      void tx.table('settings').add(defaultSettings())
     })
   }
 }

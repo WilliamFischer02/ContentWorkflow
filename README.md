@@ -1,41 +1,38 @@
 # ContentWorkflow 🧙
 
-**BingusTheWizard's content-workflow dashboard** — a local-first web app for running the
-stream → clips → short-form pipeline as a solo streamer.
+**BingusTheWizard's content-workflow dashboard** — a local-first, commercial-grade web app for
+running the stream → clips → short-form pipeline as a solo streamer.
 
-Two parts:
+**Live:** deployed on Vercel from `main` (auto-deploys on every push).
 
-1. **Channel quick-links bar** — one-click, new-tab access to YouTube upload, TikTok upload,
-   Instagram (Reel creation is mobile-only), the Twitch clips manager, and the Twitch dashboard.
-2. **Ideas / project manager** — every stream "Idea" is a project that instantiates a
-   customizable checklist template covering the whole pipeline: choose game → stream →
-   review VOD → create clips → make verticals → upload per platform → share everywhere.
+## What it does
 
-All data lives **locally in your browser** (IndexedDB via Dexie.js). No backend, no login,
-no cloud — clearing site data clears the dashboard.
+- **Quick-launch bar** — one-click, new-tab access to the real channel destinations: YouTube
+  Studio upload, TikTok Studio upload, TikTok profile, Instagram (Reel creation is mobile-only),
+  Twitch clips manager, Twitch dashboard. Fully editable in Settings.
+- **Ideas as projects** — every stream idea gets title, game, status, **priority**, **target
+  date**, **tags**, notes, and its own instance of a pipeline checklist.
+- **Two views** — a list sidebar with search/filter/sort, and a **Kanban board** with
+  drag-and-drop between Backlog / In progress / Done.
+- **Pipeline checklists** — three step types (`task`, `deep-link`, `link-input`), per-step
+  **notes**, a "Next up" highlight, hide-completed, animated progress, and a confetti
+  celebration at 100%.
+- **Templates** — full CRUD over pipeline templates. Each idea gets a *copy* of the steps, so
+  editing a template never touches existing ideas' progress.
+- **Command palette** — `⌘K` / `Ctrl K` to jump to any idea or page; `N` for a new idea.
+- **Twitch clips** — recent clips with thumbnails via the Helix API (serverless, secret stays
+  server-side; auto-noops when unconfigured).
+- **Data ownership** — JSON backup export/import and full reset from Settings. Everything lives
+  in the browser's IndexedDB; no account, no server-side storage.
 
 ## Tech stack
 
-- [Vite](https://vitejs.dev/) + [React](https://react.dev/) + TypeScript
-- [Tailwind CSS](https://tailwindcss.com/) v4
-- [Dexie.js](https://dexie.org/) (IndexedDB) with versioned schema, seeded default template
+- [Vite](https://vitejs.dev/) + [React 18](https://react.dev/) + TypeScript (strict)
+- [Tailwind CSS v4](https://tailwindcss.com/) with a custom design-token theme, CSS keyframe
+  animation system (staggered entrances, reduced-motion aware), Inter variable font
+- [Dexie.js](https://dexie.org/) (IndexedDB) with **versioned schema migrations** (currently v2)
 - [React Router](https://reactrouter.com/) (`createBrowserRouter`)
-- Hosted on [Vercel](https://vercel.com/) with a SPA rewrite (`vercel.json`)
-
-## Features
-
-- **Ideas CRUD** — title, game, status (backlog / active / done), notes, timestamps.
-- **Checklist templates CRUD** — reorder, relabel, retype and add/remove steps. Three step types:
-  - `task` — simple checkbox
-  - `deep-link` — checkbox + a button that opens a hardcoded URL (YouTube/TikTok upload pages)
-  - `link-input` — checkbox + collect multiple labeled URLs (e.g. clip a/b/c), rendered as
-    clickable links
-- **Per-idea progress** — each Idea gets its own *copy* of the template steps, so checked
-  state and pasted links persist independently. **Editing a template never wipes existing
-  Ideas' progress** — changes only apply to Ideas created afterwards.
-- **Progress bar** per Idea, status filters, dashboard overview.
-- **Optional**: "Fetch recent Twitch clips" via a Vercel serverless function (`/api/clips`)
-  using the Twitch Helix API — gracefully disabled until configured.
+- Vercel hosting + `vercel.json` SPA rewrite + `/api/clips` serverless function
 
 ## Local development
 
@@ -48,61 +45,52 @@ npm run build      # type-check + production build to dist/
 npm run preview    # serve the production build locally
 ```
 
-> The `/api/clips` serverless function does not run under `npm run dev` (plain Vite).
-> Use `vercel dev` if you want to exercise it locally — the UI handles its absence gracefully.
+> `/api/clips` doesn't run under plain `npm run dev` — use `vercel dev` to exercise it locally.
+> The UI handles its absence gracefully.
 
 ## Deploying to Vercel
 
-1. Push this repo to GitHub.
-2. [Import the repo](https://vercel.com/new) in Vercel — it auto-detects Vite
-   (build command `npm run build`, output `dist`).
-3. `vercel.json` already contains the catch-all rewrite so deep links like `/ideas/123`
-   resolve to the SPA:
-   ```json
-   { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
-   ```
-4. Deploy. Done — no further configuration needed for the core app.
+The repo is import-ready: Vercel auto-detects Vite, `vercel.json` provides the SPA rewrite.
+Once the GitHub repo is connected, every push to `main` deploys automatically.
 
-### Optional: Twitch clip auto-fetch
+### Twitch clip fetching (optional)
 
-1. Register an app at the [Twitch Developer Console](https://dev.twitch.tv/console/apps)
-   to get a **Client ID** and **Client Secret**.
-2. Find your broadcaster id (`GET /helix/users?login=BingusTheWizard`).
-3. In the Vercel project settings, add the env vars from [`.env.example`](.env.example):
-   - `VITE_TWITCH_CLIENT_ID` (safe for the client bundle)
-   - `TWITCH_CLIENT_SECRET` (**server-side only** — used exclusively by `api/clips.ts`)
-   - `TWITCH_BROADCASTER_ID`
-4. Redeploy. The "Fetch recent Twitch clips" button on the dashboard now works.
-   If the vars are unset the endpoint returns 501 and the UI shows a friendly notice.
+Set these in the Vercel project's Environment Variables (see `.env.example`), then redeploy:
+
+| Variable | Where it lives | Purpose |
+| --- | --- | --- |
+| `VITE_TWITCH_CLIENT_ID` | client bundle | feature detection + Helix client id |
+| `TWITCH_CLIENT_SECRET` | **server only** | client-credentials flow in `api/clips.ts` |
+| `TWITCH_BROADCASTER_ID` | server only | whose clips to fetch |
 
 ## GitHub Pages fallback
 
-GitHub Pages can't do server-side rewrites, so `createBrowserRouter` deep links would 404
-on refresh. If you must deploy to Pages instead of Vercel:
+Pages can't do server rewrites: set `base: '/ContentWorkflow/'` in `vite.config.ts`, swap
+`createBrowserRouter` → `createHashRouter` in `src/router.tsx`, publish `dist/`. The clips
+function is Vercel-only and stays disabled there.
 
-1. In `vite.config.ts`, set the base path:
-   ```ts
-   export default defineConfig({ base: '/ContentWorkflow/', ... })
-   ```
-2. In `src/router.tsx`, swap `createBrowserRouter` for `createHashRouter`
-   (same route table, `#/`-style URLs).
-3. Build and publish `dist/` to Pages. The `/api/clips` function is Vercel-only and will
-   simply stay disabled.
+## Data model (Dexie, schema v2)
 
-## Data model
+| Table | Key | Indexes |
+| --- | --- | --- |
+| `ideas` | `id` | `status, priority, dueDate, createdAt, updatedAt` |
+| `checklistTemplates` | `id` | `name` |
+| `checklistItems` | `id` | `ideaId, [ideaId+order]` |
+| `settings` | `id` | singleton row `'app'` (channel name, quick links) |
 
-Dexie database `ContentWorkflowDB`, schema v1 (see `src/db/db.ts`):
+Schema history:
 
-| Table                | Key  | Indexes                       |
-| -------------------- | ---- | ----------------------------- |
-| `ideas`              | `id` | `status, createdAt, updatedAt` |
-| `checklistTemplates` | `id` | `name`                        |
-| `checklistItems`     | `id` | `ideaId, [ideaId+order]`      |
+- **v1** — ideas / templates / items with embedded `steps` and `links` arrays.
+- **v2** — adds `priority`, `dueDate`, `tags` to ideas; `note` to checklist items; the
+  `settings` table; and migrates the v1 placeholder upload URLs to the real channel URLs.
+  The upgrade runs automatically and preserves all existing data (covered by an automated
+  browser test that seeds a v1 database and verifies the migration).
 
-- `ChecklistTemplate.steps` is an embedded, ordered array of `TemplateStep`
-  (`task` / `deep-link` / `link-input`, optional `deepLinkUrl`).
-- `ChecklistItem` is a per-Idea copy of a step with its own `done` flag and embedded
-  `links: [{ id, label, url }]` entries.
-- A default "Stream → Clips pipeline" template (steps 0a–10) is seeded on first run.
-- Future schema changes go through Dexie's versioned migrations
-  (`db.version(n).stores(...).upgrade(...)`).
+## Keyboard shortcuts
+
+| Keys | Action |
+| --- | --- |
+| `⌘K` / `Ctrl K` | Command palette (search ideas, navigate, export) |
+| `N` | New idea |
+| `↑ ↓ ↵` | Navigate palette results |
+| `Esc` | Close dialogs |

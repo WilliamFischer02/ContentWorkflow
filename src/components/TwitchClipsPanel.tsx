@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { formatRelativeTime } from '../lib/dates'
+import { IconExternal, IconPlay } from './Icons'
 
 interface Clip {
   id: string
@@ -6,6 +8,8 @@ interface Clip {
   title: string
   view_count: number
   created_at: string
+  thumbnail_url?: string
+  duration?: number
 }
 
 type FetchState =
@@ -18,10 +22,9 @@ type FetchState =
 const CONFIGURED = Boolean(import.meta.env.VITE_TWITCH_CLIENT_ID)
 
 /**
- * Optional Twitch Helix integration. Calls the Vercel serverless function at
- * /api/clips, which holds the client secret server-side. Gracefully no-ops
- * when the env vars aren't set (or when running the plain Vite dev server,
- * where /api routes don't exist).
+ * Twitch Helix integration via the Vercel serverless function at /api/clips
+ * (client secret stays server-side). Auto-fetches once when credentials are
+ * configured; gracefully no-ops on the plain Vite dev server or when unset.
  */
 export function TwitchClipsPanel() {
   const [state, setState] = useState<FetchState>({ kind: 'idle' })
@@ -61,54 +64,97 @@ export function TwitchClipsPanel() {
     }
   }
 
+  useEffect(() => {
+    if (CONFIGURED) void fetchClips()
+  }, [])
+
   return (
-    <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+    <section className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
+          <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-zinc-400">
+            <IconPlay className="size-3.5 text-twitch" />
             Recent Twitch clips
           </h2>
           <p className="mt-0.5 text-xs text-zinc-500">
-            Optional: pulls your latest clips via the Twitch Helix API.
-            {!CONFIGURED && ' Not configured — see .env.example.'}
+            Latest clips from your channel via the Twitch Helix API.
+            {!CONFIGURED && ' Not configured — see Settings / .env.example.'}
           </p>
         </div>
         <button
           onClick={() => void fetchClips()}
           disabled={state.kind === 'loading'}
-          className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-twitch hover:text-twitch disabled:opacity-50"
+          className="btn-ghost"
         >
-          {state.kind === 'loading' ? 'Fetching…' : 'Fetch recent Twitch clips'}
+          {state.kind === 'loading' ? 'Fetching…' : 'Refresh'}
         </button>
       </div>
 
+      {state.kind === 'loading' && (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton aspect-video rounded-lg" />
+          ))}
+        </div>
+      )}
       {state.kind === 'unconfigured' && (
-        <p className="mt-3 rounded-md border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-400">
+        <p className="mt-3 rounded-lg border border-surface-800 bg-surface-950 p-3 text-xs text-zinc-400">
           {state.message}
         </p>
       )}
       {state.kind === 'error' && (
-        <p className="mt-3 rounded-md border border-red-900 bg-red-950/40 p-3 text-xs text-red-300">
+        <p className="mt-3 rounded-lg border border-red-900 bg-red-950/40 p-3 text-xs text-red-300">
           {state.message}
         </p>
       )}
       {state.kind === 'ready' &&
         (state.clips.length === 0 ? (
-          <p className="mt-3 text-xs text-zinc-500">No clips found.</p>
+          <p className="mt-3 text-xs text-zinc-500">
+            No clips found yet — clip some stream moments and they'll show up here.
+          </p>
         ) : (
-          <ul className="mt-3 space-y-1">
-            {state.clips.map((clip) => (
-              <li key={clip.id}>
+          <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {state.clips.map((clip, index) => (
+              <li
+                key={clip.id}
+                className="anim-fade-up"
+                style={{ '--stagger': index } as React.CSSProperties}
+              >
                 <a
                   href={clip.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-zinc-800"
+                  className="group block overflow-hidden rounded-lg border border-surface-800 bg-surface-950 transition-all hover:border-twitch/50 hover:shadow-glow"
                 >
-                  <span className="truncate text-twitch">{clip.title}</span>
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    {clip.view_count.toLocaleString()} views
-                  </span>
+                  {clip.thumbnail_url ? (
+                    <div className="relative aspect-video overflow-hidden">
+                      <img
+                        src={clip.thumbnail_url}
+                        alt=""
+                        loading="lazy"
+                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      {clip.duration !== undefined && (
+                        <span className="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-[10px] font-semibold">
+                          {Math.round(clip.duration)}s
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center bg-surface-900">
+                      <IconPlay className="size-6 text-zinc-700" />
+                    </div>
+                  )}
+                  <div className="p-2.5">
+                    <p className="truncate text-xs font-medium group-hover:text-twitch">
+                      {clip.title}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1 text-[10px] text-zinc-500">
+                      {clip.view_count.toLocaleString()} views ·{' '}
+                      {formatRelativeTime(new Date(clip.created_at).getTime())}
+                      <IconExternal className="ms-auto size-2.5 opacity-40" />
+                    </p>
+                  </div>
                 </a>
               </li>
             ))}

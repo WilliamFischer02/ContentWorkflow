@@ -1,10 +1,13 @@
 import { db, uid } from './db'
-import type { ChecklistItem, Idea, IdeaStatus, LinkEntry } from './types'
+import type { ChecklistItem, Idea, IdeaStatus, LinkEntry, Priority } from './types'
 
 export interface IdeaDraft {
   title: string
   game: string
   status: IdeaStatus
+  priority: Priority
+  dueDate?: number
+  tags: string[]
   notes: string
 }
 
@@ -19,6 +22,9 @@ export async function createIdea(draft: IdeaDraft, templateId: string): Promise<
     title: draft.title.trim(),
     game: draft.game.trim(),
     status: draft.status,
+    priority: draft.priority,
+    ...(draft.dueDate !== undefined ? { dueDate: draft.dueDate } : {}),
+    tags: draft.tags,
     notes: draft.notes,
     templateId,
     createdAt: now,
@@ -36,6 +42,7 @@ export async function createIdea(draft: IdeaDraft, templateId: string): Promise<
       ...(step.deepLinkUrl ? { deepLinkUrl: step.deepLinkUrl } : {}),
       done: false,
       links: [],
+      note: '',
     }))
 
   await db.transaction('rw', db.ideas, db.checklistItems, async () => {
@@ -45,8 +52,42 @@ export async function createIdea(draft: IdeaDraft, templateId: string): Promise<
   return idea.id
 }
 
-export async function updateIdea(id: string, changes: Partial<IdeaDraft>): Promise<void> {
+export async function updateIdea(
+  id: string,
+  changes: Partial<IdeaDraft> & { dueDate?: number | undefined },
+): Promise<void> {
   await db.ideas.update(id, { ...changes, updatedAt: Date.now() })
+}
+
+/** Duplicates an Idea with the same step structure but progress reset. */
+export async function duplicateIdea(id: string): Promise<string | undefined> {
+  const idea = await db.ideas.get(id)
+  if (!idea) return undefined
+  const items = await db.checklistItems.where('ideaId').equals(id).sortBy('order')
+
+  const now = Date.now()
+  const copy: Idea = {
+    ...idea,
+    id: uid(),
+    title: `${idea.title} (copy)`,
+    status: 'backlog',
+    createdAt: now,
+    updatedAt: now,
+  }
+  const copiedItems: ChecklistItem[] = items.map((item) => ({
+    ...item,
+    id: uid(),
+    ideaId: copy.id,
+    done: false,
+    links: [],
+    note: '',
+  }))
+
+  await db.transaction('rw', db.ideas, db.checklistItems, async () => {
+    await db.ideas.add(copy)
+    await db.checklistItems.bulkAdd(copiedItems)
+  })
+  return copy.id
 }
 
 export async function deleteIdea(id: string): Promise<void> {
@@ -63,6 +104,13 @@ async function touchIdea(ideaId: string): Promise<void> {
 export async function setItemDone(item: ChecklistItem, done: boolean): Promise<void> {
   await db.transaction('rw', db.ideas, db.checklistItems, async () => {
     await db.checklistItems.update(item.id, { done })
+    await touchIdea(item.ideaId)
+  })
+}
+
+export async function setItemNote(item: ChecklistItem, note: string): Promise<void> {
+  await db.transaction('rw', db.ideas, db.checklistItems, async () => {
+    await db.checklistItems.update(item.id, { note })
     await touchIdea(item.ideaId)
   })
 }
