@@ -1,10 +1,46 @@
-import type { ChecklistTemplate, TemplateStep } from './types'
+import type { AppSettings, ChecklistTemplate, QuickLink, TemplateStep } from './types'
 
-export const YOUTUBE_UPLOAD_URL = 'https://studio.youtube.com/channel/UC/videos/upload'
-export const TIKTOK_UPLOAD_URL = 'https://www.tiktok.com/tiktokstudio/upload'
+/** Legacy placeholder URLs from schema v1 — migrated to the real channel URLs in v2. */
+export const LEGACY_YOUTUBE_UPLOAD_URL = 'https://studio.youtube.com/channel/UC/videos/upload'
+export const LEGACY_TIKTOK_UPLOAD_URL = 'https://www.tiktok.com/tiktokstudio/upload'
+
+export const YOUTUBE_UPLOAD_URL =
+  'https://studio.youtube.com/channel/UClmDqtKtCpuRq7X8E0DBRjA/videos/upload'
+export const TIKTOK_UPLOAD_URL = 'https://www.tiktok.com/tiktokstudio/upload?from=webapp&tab=video'
+export const TIKTOK_PROFILE_URL = 'https://www.tiktok.com/@bingusthewizardtv'
 export const INSTAGRAM_URL = 'https://www.instagram.com/'
 export const TWITCH_CLIPS_URL = 'https://dashboard.twitch.tv/u/BingusTheWizard/content/clips'
 export const TWITCH_DASHBOARD_URL = 'https://dashboard.twitch.tv/'
+
+export function defaultQuickLinks(): QuickLink[] {
+  return [
+    { id: crypto.randomUUID(), label: 'YouTube upload', url: YOUTUBE_UPLOAD_URL, color: 'red' },
+    { id: crypto.randomUUID(), label: 'TikTok upload', url: TIKTOK_UPLOAD_URL, color: 'cyan' },
+    { id: crypto.randomUUID(), label: 'TikTok profile', url: TIKTOK_PROFILE_URL, color: 'cyan' },
+    {
+      id: crypto.randomUUID(),
+      label: 'Instagram',
+      url: INSTAGRAM_URL,
+      color: 'pink',
+      note: 'Reel creation is mobile-only',
+    },
+    { id: crypto.randomUUID(), label: 'Twitch clips', url: TWITCH_CLIPS_URL, color: 'purple' },
+    {
+      id: crypto.randomUUID(),
+      label: 'Twitch dashboard',
+      url: TWITCH_DASHBOARD_URL,
+      color: 'purple',
+    },
+  ]
+}
+
+export function defaultSettings(): AppSettings {
+  return {
+    id: 'app',
+    channelName: 'BingusTheWizard',
+    quickLinks: defaultQuickLinks(),
+  }
+}
 
 interface StepSeed {
   label: string

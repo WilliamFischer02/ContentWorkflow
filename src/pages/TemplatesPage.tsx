@@ -2,10 +2,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { createTemplate, deleteTemplate, duplicateTemplate, newStep } from '../db/templates'
+import { useToast } from '../lib/toast'
 import { useState } from 'react'
+import { IconCopy, IconPlus, IconTrash } from '../components/Icons'
 
 export function TemplatesPage() {
   const navigate = useNavigate()
+  const toast = useToast()
   const templates = useLiveQuery(() => db.checklistTemplates.orderBy('name').toArray(), [])
   const ideas = useLiveQuery(() => db.ideas.toArray(), [])
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
@@ -20,8 +23,8 @@ export function TemplatesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className="mx-auto max-w-3xl space-y-5">
+      <div className="anim-fade-up flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Checklist templates</h1>
           <p className="mt-1 text-sm text-zinc-400">
@@ -29,24 +32,27 @@ export function TemplatesPage() {
             changes the checklists of existing ideas.
           </p>
         </div>
-        <button
-          onClick={() => void handleCreate()}
-          className="shrink-0 rounded-md bg-twitch-dark px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-twitch"
-        >
-          + New template
+        <button onClick={() => void handleCreate()} className="btn-primary shrink-0">
+          <IconPlus className="size-4" />
+          New template
         </button>
       </div>
 
       {templates === undefined ? (
-        <p className="text-zinc-500">Loading…</p>
+        <div className="space-y-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="skeleton h-16 rounded-xl" />
+          ))}
+        </div>
       ) : templates.length === 0 ? (
         <p className="text-zinc-500">No templates yet.</p>
       ) : (
         <ul className="space-y-2">
-          {templates.map((template) => (
+          {templates.map((template, index) => (
             <li
               key={template.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3"
+              className="anim-fade-up card card-hover flex items-center justify-between gap-3 px-4 py-3"
+              style={{ '--stagger': index } as React.CSSProperties}
             >
               <Link to={`/templates/${template.id}`} className="min-w-0 flex-1">
                 <p className="truncate font-medium hover:text-twitch">{template.name}</p>
@@ -58,23 +64,29 @@ export function TemplatesPage() {
               <div className="flex shrink-0 items-center gap-2 text-xs">
                 <button
                   onClick={() =>
-                    void duplicateTemplate(template.id).then((id) => id && navigate(`/templates/${id}`))
+                    void duplicateTemplate(template.id).then((id) => {
+                      if (id) {
+                        toast({ title: 'Template duplicated', kind: 'success' })
+                        navigate(`/templates/${id}`)
+                      }
+                    })
                   }
-                  className="rounded-md border border-zinc-700 px-2.5 py-1 text-zinc-300 hover:border-twitch hover:text-twitch"
+                  className="btn-ghost"
                 >
+                  <IconCopy className="size-3.5" />
                   Duplicate
                 </button>
                 {pendingDelete === template.id ? (
                   <>
                     <button
                       onClick={() => void deleteTemplate(template.id)}
-                      className="rounded-md bg-red-900 px-2.5 py-1 font-semibold text-red-200 hover:bg-red-800"
+                      className="rounded-lg bg-red-900 px-2.5 py-1.5 font-semibold text-red-200 hover:bg-red-800"
                     >
                       Confirm
                     </button>
                     <button
                       onClick={() => setPendingDelete(null)}
-                      className="rounded-md px-2 py-1 text-zinc-400 hover:text-zinc-200"
+                      className="rounded-lg px-2 py-1.5 text-zinc-400 hover:text-zinc-200"
                     >
                       Cancel
                     </button>
@@ -84,9 +96,9 @@ export function TemplatesPage() {
                     onClick={() => setPendingDelete(template.id)}
                     disabled={templates.length === 1}
                     title={templates.length === 1 ? 'Keep at least one template' : 'Delete template'}
-                    className="rounded-md border border-zinc-800 px-2.5 py-1 text-zinc-500 hover:border-red-800 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="btn-danger-ghost"
                   >
-                    Delete
+                    <IconTrash className="size-3.5" />
                   </button>
                 )}
               </div>

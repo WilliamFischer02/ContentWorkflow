@@ -50,18 +50,30 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       return
     }
     const data = (await clipsRes.json()) as {
-      data: Array<{ id: string; url: string; title: string; view_count: number; created_at: string }>
+      data: Array<{
+        id: string
+        url: string
+        title: string
+        view_count: number
+        created_at: string
+        thumbnail_url: string
+        duration: number
+      }>
     }
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600')
     res.status(200).json({
-      clips: data.data.map(({ id, url, title, view_count, created_at }) => ({
-        id,
-        url,
-        title,
-        view_count,
-        created_at,
-      })),
+      clips: data.data.map(
+        ({ id, url, title, view_count, created_at, thumbnail_url, duration }) => ({
+          id,
+          url,
+          title,
+          view_count,
+          created_at,
+          thumbnail_url,
+          duration,
+        }),
+      ),
     })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })

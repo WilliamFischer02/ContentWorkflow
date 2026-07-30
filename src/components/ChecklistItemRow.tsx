@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ChecklistItem } from '../db/types'
-import { addItemLink, removeItemLink, setItemDone } from '../db/ideas'
+import { addItemLink, removeItemLink, setItemDone, setItemNote } from '../db/ideas'
+import { IconExternal, IconPencil, IconX } from './Icons'
 
 function normalizeUrl(raw: string): string {
   const trimmed = raw.trim()
@@ -8,9 +9,19 @@ function normalizeUrl(raw: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 }
 
-export function ChecklistItemRow({ item }: { item: ChecklistItem }) {
+export function ChecklistItemRow({
+  item,
+  index,
+  isNext,
+}: {
+  item: ChecklistItem
+  index: number
+  isNext: boolean
+}) {
   const [label, setLabel] = useState('')
   const [url, setUrl] = useState('')
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteDraft, setNoteDraft] = useState(item.note)
 
   async function handleAddLink(e: React.FormEvent) {
     e.preventDefault()
@@ -21,11 +32,21 @@ export function ChecklistItemRow({ item }: { item: ChecklistItem }) {
     setUrl('')
   }
 
+  async function saveNote() {
+    if (noteDraft !== item.note) await setItemNote(item, noteDraft)
+    if (!noteDraft.trim()) setNoteOpen(false)
+  }
+
   return (
     <li
-      className={`rounded-lg border p-3 transition-colors ${
-        item.done ? 'border-zinc-800/60 bg-zinc-900/30' : 'border-zinc-800 bg-zinc-900/70'
+      className={`anim-fade-up rounded-xl border p-3.5 transition-all duration-200 ${
+        item.done
+          ? 'border-surface-800/50 bg-surface-900/30'
+          : isNext
+            ? 'border-twitch/40 bg-surface-900/80 shadow-glow'
+            : 'border-surface-800 bg-surface-900/70'
       }`}
+      style={{ '--stagger': Math.min(index, 12) } as React.CSSProperties}
     >
       <div className="flex items-start gap-3">
         <input
@@ -38,30 +59,67 @@ export function ChecklistItemRow({ item }: { item: ChecklistItem }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`text-sm font-medium ${item.done ? 'text-zinc-500 line-through' : ''}`}
+              className={`text-sm font-medium transition-colors ${
+                item.done ? 'text-zinc-500 line-through' : ''
+              }`}
             >
               {item.label}
             </span>
+            {isNext && (
+              <span className="rounded-full bg-twitch/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-twitch">
+                Next up
+              </span>
+            )}
             {item.type === 'deep-link' && item.deepLinkUrl && (
               <a
                 href={item.deepLinkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md bg-twitch-dark px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-twitch"
+                className="inline-flex items-center gap-1 rounded-lg bg-twitch-dark px-2.5 py-1 text-xs font-semibold text-white transition-all hover:bg-twitch hover:shadow-glow"
               >
-                Open ↗
+                Open
+                <IconExternal className="size-3" />
               </a>
             )}
+            <button
+              onClick={() => {
+                setNoteOpen((v) => !v)
+                setNoteDraft(item.note)
+              }}
+              title={item.note ? 'Edit note' : 'Add note'}
+              className={`ms-auto rounded-md p-1.5 transition-colors ${
+                item.note ? 'text-twitch' : 'text-zinc-600 hover:text-zinc-300'
+              }`}
+            >
+              <IconPencil className="size-3.5" />
+            </button>
           </div>
 
+          {item.note && !noteOpen && (
+            <p className="mt-1.5 whitespace-pre-wrap rounded-lg bg-surface-950/50 px-2.5 py-1.5 text-xs text-zinc-400">
+              {item.note}
+            </p>
+          )}
+          {noteOpen && (
+            <textarea
+              autoFocus
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              onBlur={() => void saveNote()}
+              rows={2}
+              placeholder="Step note — saved when you click away…"
+              className="input mt-1.5 w-full resize-y !text-xs"
+            />
+          )}
+
           {item.type === 'link-input' && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-2.5 space-y-2">
               {item.links.length > 0 && (
                 <ul className="flex flex-wrap gap-2">
                   {item.links.map((link) => (
                     <li
                       key={link.id}
-                      className="group flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950 py-0.5 pl-2.5 pr-1 text-xs"
+                      className="anim-pop flex items-center gap-1 rounded-full border border-surface-700 bg-surface-950 py-0.5 pl-2.5 pr-1 text-xs"
                     >
                       <a
                         href={link.url}
@@ -76,9 +134,9 @@ export function ChecklistItemRow({ item }: { item: ChecklistItem }) {
                         onClick={() => void removeItemLink(item, link.id)}
                         title="Remove link"
                         aria-label={`Remove link ${link.label || link.url}`}
-                        className="rounded-full px-1 text-zinc-600 hover:text-red-400"
+                        className="rounded-full p-0.5 text-zinc-600 hover:text-red-400"
                       >
-                        ✕
+                        <IconX className="size-3" />
                       </button>
                     </li>
                   ))}
@@ -89,19 +147,15 @@ export function ChecklistItemRow({ item }: { item: ChecklistItem }) {
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder={`label (e.g. clip ${String.fromCharCode(97 + (item.links.length % 26))})`}
-                  className="w-28 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs outline-none focus:border-twitch"
+                  className="input w-28 !px-2 !py-1 !text-xs"
                 />
                 <input
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="paste URL…"
-                  className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs outline-none focus:border-twitch"
+                  className="input min-w-0 flex-1 !px-2 !py-1 !text-xs"
                 />
-                <button
-                  type="submit"
-                  disabled={!url.trim()}
-                  className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors hover:border-twitch hover:text-twitch disabled:cursor-not-allowed disabled:opacity-40"
-                >
+                <button type="submit" disabled={!url.trim()} className="btn-ghost !px-2.5 !py-1">
                   Add
                 </button>
               </form>

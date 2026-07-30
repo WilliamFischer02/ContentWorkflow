@@ -1,14 +1,188 @@
 @import 'tailwindcss';
 
 @theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Brand */
   --color-twitch: #a970ff;
   --color-twitch-dark: #772ce8;
+  --color-brand-glow: #c4b5fd;
+
+  /* Elevated dark surfaces (slightly warmer than pure zinc) */
+  --color-surface-950: #0b0b0f;
+  --color-surface-900: #121218;
+  --color-surface-850: #17171f;
+  --color-surface-800: #1e1e28;
+  --color-surface-700: #2a2a38;
+
+  --shadow-glow: 0 0 24px rgb(169 112 255 / 0.18);
 }
 
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
-  @apply bg-zinc-950 text-zinc-100 antialiased;
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  @apply bg-surface-950 text-zinc-100 antialiased;
+  background-image:
+    radial-gradient(1200px 500px at 80% -10%, rgb(119 44 232 / 0.09), transparent 60%),
+    radial-gradient(900px 420px at -10% 0%, rgb(56 189 248 / 0.05), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* ---------- Scrollbars ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-700) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-surface-700);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- Animation system ----------
+   Entrance utilities driven by a per-element --stagger index:
+   <li className="anim-fade-up" style={{ '--stagger': i }} />
+   All animations collapse to instant under prefers-reduced-motion. */
+
+@keyframes cw-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cw-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cw-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cw-pop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes cw-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cw-shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes cw-ring-fill {
+  from {
+    stroke-dashoffset: var(--ring-circumference, 264);
+  }
+}
+
+.anim-fade-up {
+  animation: cw-fade-up 0.45s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+  animation-delay: calc(var(--stagger, 0) * 45ms);
+}
+.anim-scale-in {
+  animation: cw-scale-in 0.3s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+}
+.anim-slide-in {
+  animation: cw-slide-in 0.35s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+  animation-delay: calc(var(--stagger, 0) * 45ms);
+}
+.anim-pop {
+  animation: cw-pop 0.35s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+}
+.anim-toast-in {
+  animation: cw-toast-in 0.32s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+}
+.anim-ring {
+  animation: cw-ring-fill 0.9s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-850) 25%,
+    var(--color-surface-800) 50%,
+    var(--color-surface-850) 75%
+  );
+  background-size: 200% 100%;
+  animation: cw-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-up,
+  .anim-scale-in,
+  .anim-slide-in,
+  .anim-pop,
+  .anim-toast-in,
+  .anim-ring,
+  .skeleton {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ---------- Shared surfaces ---------- */
+.card {
+  @apply rounded-xl border border-surface-700/60 bg-surface-900/80;
+}
+.card-hover {
+  @apply transition-all duration-200 hover:border-surface-700 hover:bg-surface-850 hover:shadow-glow;
+}
+.input {
+  @apply rounded-lg border border-surface-700 bg-surface-950/80 px-3 py-2 text-sm outline-none transition-colors placeholder:text-zinc-600 focus:border-twitch;
+}
+.btn-primary {
+  @apply inline-flex items-center gap-1.5 rounded-lg bg-twitch-dark px-3.5 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-twitch hover:shadow-glow active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+}
+.btn-ghost {
+  @apply inline-flex items-center gap-1.5 rounded-lg border border-surface-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-twitch/60 hover:text-twitch disabled:cursor-not-allowed disabled:opacity-40;
+}
+.btn-danger-ghost {
+  @apply inline-flex items-center gap-1.5 rounded-lg border border-surface-800 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-red-800 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40;
 }
