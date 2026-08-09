@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import type { LinkColor, QuickLink } from '../db/types'
 import { updateSettings } from '../db/settings'
-import { defaultQuickLinks } from '../db/seed'
+import { defaultQuickLinks, defaultStreamDays } from '../db/seed'
+import { DAY_NAMES, STREAMS, STREAM_GAMES } from '../content/streams'
 import { exportBackup, importBackup, resetAllData } from '../lib/backup'
 import { useToast } from '../lib/toast'
 import {
@@ -26,6 +27,7 @@ export function SettingsPage() {
 
   const [channelName, setChannelName] = useState('')
   const [links, setLinks] = useState<QuickLink[] | null>(null)
+  const [streamDays, setStreamDays] = useState<Record<string, number> | null>(null)
   const [dirty, setDirty] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -35,6 +37,7 @@ export function SettingsPage() {
     if (settings && links === null) {
       setChannelName(settings.channelName)
       setLinks(settings.quickLinks)
+      setStreamDays(settings.streamDays ?? defaultStreamDays())
     }
   }, [settings, links])
 
@@ -68,6 +71,7 @@ export function SettingsPage() {
     await updateSettings({
       channelName: channelName.trim() || 'BingusTheWizard',
       quickLinks: (links ?? []).filter((l) => l.label.trim() && l.url.trim()),
+      streamDays: streamDays ?? defaultStreamDays(),
     })
     setDirty(false)
     toast({ title: 'Settings saved', kind: 'success' })
@@ -121,6 +125,40 @@ export function SettingsPage() {
       </section>
 
       <section className="anim-fade-up card p-5" style={{ '--stagger': 2 } as React.CSSProperties}>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wider text-zinc-400">
+          Stream schedule
+        </h2>
+        <p className="mb-3 text-xs text-zinc-500">
+          Which day each weekly stream airs — the Weekly panel orders its columns to match.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {STREAM_GAMES.map((game) => (
+            <label key={game} className="block text-sm">
+              <span className="mb-1 flex items-center gap-1.5 text-zinc-400">
+                <span aria-hidden>{STREAMS[game].emoji}</span>
+                {STREAMS[game].name}
+              </span>
+              <select
+                value={streamDays?.[game] ?? STREAMS[game].defaultDay}
+                onChange={(e) => {
+                  setStreamDays({ ...(streamDays ?? defaultStreamDays()), [game]: Number(e.target.value) })
+                  setDirty(true)
+                }}
+                className="input w-full"
+                aria-label={`${STREAMS[game].name} stream day`}
+              >
+                {DAY_NAMES.map((name, day) => (
+                  <option key={name} value={day}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="anim-fade-up card p-5" style={{ '--stagger': 3 } as React.CSSProperties}>
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
@@ -271,9 +309,10 @@ export function SettingsPage() {
       >
         <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-zinc-400">About</h2>
         <p>
-          ContentWorkflow v2 — local-first stream pipeline manager. Vite · React · TypeScript ·
-          Tailwind CSS · Dexie (IndexedDB). Twitch clip fetching runs through a Vercel serverless
-          function; credentials are configured via environment variables, never stored here.
+          ContentWorkflow v3 — local-first creator panel: weekly 3-stream pipeline, idea board, and
+          toolkit. Vite · React · TypeScript · Tailwind CSS · Dexie (IndexedDB). Twitch clip
+          fetching runs through a Vercel serverless function; credentials are configured via
+          environment variables, never stored here.
         </p>
       </section>
     </div>

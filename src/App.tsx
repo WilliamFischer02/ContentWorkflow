@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { TopBar } from './components/TopBar'
 import { IdeaSidebar } from './components/IdeaSidebar'
 import { CommandPalette } from './components/CommandPalette'
@@ -17,8 +17,12 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 export function AppLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [newIdeaOpen, setNewIdeaOpen] = useState(false)
+  // The weekly panel is stream-centric and wants the full width; the idea
+  // sidebar stays on every idea-centric page.
+  const showSidebar = location.pathname !== '/'
 
   useEffect(() => {
     const offNewIdea = onAppEvent(EVENT_NEW_IDEA, () => setNewIdeaOpen(true))
@@ -49,7 +53,7 @@ export function AppLayout() {
       <div className="flex min-h-screen flex-col">
         <TopBar />
         <div className="flex flex-1 flex-col md:flex-row">
-          <IdeaSidebar />
+          {showSidebar && <IdeaSidebar />}
           <main className="min-w-0 flex-1 p-4 md:p-8">
             <Outlet />
           </main>

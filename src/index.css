@@ -26,6 +26,7 @@ html {
 body {
   font-family: var(--font-sans);
   font-feature-settings: 'cv11', 'ss01';
+  overflow-x: clip;
   @apply bg-surface-950 text-zinc-100 antialiased;
   background-image:
     radial-gradient(1200px 500px at 80% -10%, rgb(119 44 232 / 0.09), transparent 60%),
@@ -185,4 +186,189 @@ body {
 }
 .btn-danger-ghost {
   @apply inline-flex items-center gap-1.5 rounded-lg border border-surface-800 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-red-800 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40;
+}
+
+/* ---------- Weekly stream column themes ----------
+   Each theme sets accent vars consumed by cards/pills/rings inside it,
+   plus a low-opacity CSS texture layer (::before, no external images)
+   so the game identity reads instantly without hurting readability. */
+
+.stream-col {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid var(--col-border, var(--color-surface-700));
+  background: var(--color-surface-900);
+  isolation: isolate;
+}
+.stream-col::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* — Marvel Rivals: cartoon comic — halftone dot grid + diagonal action
+     streaks in hot gold/magenta over a warm dark base. */
+.theme-rivals {
+  --col-accent: #fbbf24;
+  --col-accent-strong: #f59e0b;
+  --col-border: rgb(251 191 36 / 0.35);
+  --col-glow: 0 0 24px rgb(251 191 36 / 0.12);
+}
+.theme-rivals::before {
+  background:
+    radial-gradient(rgb(251 191 36 / 0.16) 1.2px, transparent 1.3px),
+    linear-gradient(115deg, transparent 0 62%, rgb(236 72 153 / 0.14) 62% 76%, transparent 76%),
+    linear-gradient(115deg, transparent 0 78%, rgb(56 189 248 / 0.12) 78% 88%, transparent 88%),
+    linear-gradient(160deg, rgb(66 32 4 / 0.55), rgb(24 16 8 / 0.25) 55%, transparent);
+  background-size:
+    14px 14px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+}
+.theme-rivals .stream-col-badge {
+  transform: skewX(-8deg);
+  background: linear-gradient(100deg, #fbbf24, #f97316);
+  color: #1c1006;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  box-shadow: 3px 3px 0 rgb(236 72 153 / 0.55);
+}
+
+/* — Minecraft: chunky pixel checker in soil browns with a grass-green
+     accent; badge gets a blocky stepped shadow like an MC button. */
+.theme-minecraft {
+  --col-accent: #4ade80;
+  --col-accent-strong: #22c55e;
+  --col-border: rgb(74 222 128 / 0.32);
+  --col-glow: 0 0 24px rgb(74 222 128 / 0.1);
+}
+.theme-minecraft::before {
+  background:
+    conic-gradient(from 0deg, rgb(62 48 30 / 0.5) 25%, rgb(44 34 20 / 0.5) 0 50%, rgb(62 48 30 / 0.5) 0 75%, rgb(44 34 20 / 0.5) 0),
+    linear-gradient(rgb(34 197 94 / 0.16), transparent 18%);
+  background-size:
+    18px 18px,
+    100% 100%;
+}
+.theme-minecraft .stream-col-badge {
+  border-radius: 0;
+  background: #3f9d4b;
+  color: #eafbe7;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow:
+    inset -3px -3px 0 rgb(0 0 0 / 0.35),
+    inset 3px 3px 0 rgb(255 255 255 / 0.22),
+    4px 4px 0 rgb(0 0 0 / 0.45);
+}
+
+/* — Chess: warm wood grain (layered thin gradients) with a cream/walnut
+     checkerboard band across the top edge. */
+.theme-chess {
+  --col-accent: #e0b26b;
+  --col-accent-strong: #ca9a4f;
+  --col-border: rgb(224 178 107 / 0.35);
+  --col-glow: 0 0 24px rgb(224 178 107 / 0.1);
+}
+.theme-chess::before {
+  background:
+    conic-gradient(from 0deg, rgb(238 217 180 / 0.5) 25%, rgb(94 62 36 / 0.6) 0 50%, rgb(238 217 180 / 0.5) 0 75%, rgb(94 62 36 / 0.6) 0),
+    repeating-linear-gradient(94deg, rgb(92 61 32 / 0.4) 0 7px, rgb(74 48 25 / 0.4) 7px 11px, rgb(103 70 39 / 0.4) 11px 21px, rgb(66 43 23 / 0.4) 21px 26px),
+    linear-gradient(180deg, rgb(58 38 20 / 0.5), rgb(28 20 12 / 0.3));
+  background-size:
+    28px 28px,
+    100% 100%,
+    100% 100%;
+  background-repeat: repeat-x, repeat, repeat;
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+}
+.theme-chess .stream-col-badge {
+  background: linear-gradient(180deg, #e8c184, #b98a4e);
+  color: #241505;
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.02em;
+  box-shadow: 0 3px 0 rgb(46 28 12 / 0.8);
+}
+
+.stream-col-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+/* ---------- Spec pills with CSS-only tooltips ---------- */
+.spec-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--col-accent, #a970ff) 35%, transparent);
+  background: color-mix(in srgb, var(--col-accent, #a970ff) 9%, transparent);
+  padding: 0.18rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--col-accent, #c4b5fd) 85%, white);
+  cursor: default;
+}
+.spec-pill[data-tone='warn'] {
+  border-color: rgb(251 191 36 / 0.45);
+  background: rgb(251 191 36 / 0.09);
+  color: #fcd34d;
+}
+.spec-pill[data-tone='avoid'] {
+  border-color: rgb(248 113 113 / 0.45);
+  background: rgb(248 113 113 / 0.09);
+  color: #fca5a5;
+}
+.spec-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: 240px;
+  border-radius: 0.6rem;
+  border: 1px solid var(--color-surface-700);
+  background: var(--color-surface-850);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 450;
+  line-height: 1.45;
+  color: #d4d4d8;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+  z-index: 40;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.5);
+}
+.spec-pill:hover .spec-tip,
+.spec-pill:focus-visible .spec-tip {
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+/* Copy-template blocks */
+.copy-block {
+  border-radius: 0.7rem;
+  border: 1px solid var(--color-surface-700);
+  background: rgb(0 0 0 / 0.35);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
