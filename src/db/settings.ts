@@ -1,13 +1,19 @@
 import { db } from './db'
-import { defaultSettings } from './seed'
+import { defaultSettings, defaultStreamDays } from './seed'
 import type { AppSettings } from './types'
 
 export const SETTINGS_ID = 'app'
 
-/** Reads settings, self-healing to defaults if the row is missing. */
+/** Reads settings, self-healing missing rows/fields (e.g. v2 backup imports). */
 export async function getSettings(): Promise<AppSettings> {
   const existing = await db.settings.get(SETTINGS_ID)
-  if (existing) return existing
+  if (existing) {
+    if (!existing.streamDays) {
+      existing.streamDays = defaultStreamDays()
+      await db.settings.put(existing)
+    }
+    return existing
+  }
   const fresh = defaultSettings()
   await db.settings.put(fresh)
   return fresh

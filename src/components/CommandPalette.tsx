@@ -13,6 +13,8 @@ import {
   IconPlus,
   IconSearch,
   IconSettings,
+  IconTv,
+  IconWrench,
 } from './Icons'
 
 interface Command {
@@ -47,9 +49,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         icon: <IconPlus className="size-4" />,
         run: () => openNewIdea(),
       },
-      { id: 'nav-home', label: 'Go to Home', icon: <IconHome className="size-4" />, run: () => navigate('/') },
+      { id: 'nav-weekly', label: 'Go to Weekly streams', icon: <IconTv className="size-4" />, run: () => navigate('/') },
+      { id: 'nav-dashboard', label: 'Go to Dashboard', icon: <IconHome className="size-4" />, run: () => navigate('/dashboard') },
       { id: 'nav-board', label: 'Go to Board', icon: <IconBoard className="size-4" />, run: () => navigate('/board') },
       { id: 'nav-templates', label: 'Go to Templates', icon: <IconList className="size-4" />, run: () => navigate('/templates') },
+      { id: 'nav-toolkit', label: 'Go to Toolkit', icon: <IconWrench className="size-4" />, run: () => navigate('/toolkit') },
       { id: 'nav-settings', label: 'Go to Settings', icon: <IconSettings className="size-4" />, run: () => navigate('/settings') },
       {
         id: 'export',

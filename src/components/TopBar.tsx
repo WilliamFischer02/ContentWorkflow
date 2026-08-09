@@ -10,6 +10,8 @@ import {
   IconHome,
   IconList,
   IconSettings,
+  IconTv,
+  IconWrench,
   LogoMark,
 } from './Icons'
 
@@ -34,9 +36,11 @@ const DOT_COLORS: Record<LinkColor, string> = {
 }
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: IconHome, end: true },
+  { to: '/', label: 'Weekly', icon: IconTv, end: true },
+  { to: '/dashboard', label: 'Dashboard', icon: IconHome, end: false },
   { to: '/board', label: 'Board', icon: IconBoard, end: false },
   { to: '/templates', label: 'Templates', icon: IconList, end: false },
+  { to: '/toolkit', label: 'Toolkit', icon: IconWrench, end: false },
   { to: '/settings', label: 'Settings', icon: IconSettings, end: false },
 ]
 

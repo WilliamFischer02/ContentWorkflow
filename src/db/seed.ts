@@ -34,11 +34,17 @@ export function defaultQuickLinks(): QuickLink[] {
   ]
 }
 
+/** Default weekly schedule: Rivals Mondays, Minecraft Wednesdays, Chess Fridays. */
+export function defaultStreamDays(): Record<string, number> {
+  return { rivals: 1, minecraft: 3, chess: 5 }
+}
+
 export function defaultSettings(): AppSettings {
   return {
     id: 'app',
     channelName: 'BingusTheWizard',
     quickLinks: defaultQuickLinks(),
+    streamDays: defaultStreamDays(),
   }
 }
 

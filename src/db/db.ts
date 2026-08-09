@@ -4,11 +4,13 @@ import type {
   ChecklistItem,
   ChecklistTemplate,
   Idea,
+  StreamRun,
   TemplateStep,
 } from './types'
 import {
   buildDefaultTemplate,
   defaultSettings,
+  defaultStreamDays,
   LEGACY_TIKTOK_UPLOAD_URL,
   LEGACY_YOUTUBE_UPLOAD_URL,
   TIKTOK_UPLOAD_URL,
@@ -25,6 +27,7 @@ class ContentWorkflowDB extends Dexie {
   checklistTemplates!: Table<ChecklistTemplate, string>
   checklistItems!: Table<ChecklistItem, string>
   settings!: Table<AppSettings, string>
+  streamRuns!: Table<StreamRun, string>
 
   constructor() {
     super('ContentWorkflowDB')
@@ -74,6 +77,25 @@ class ContentWorkflowDB extends Dexie {
             )
           })
         await tx.table<AppSettings>('settings').put(defaultSettings())
+      })
+
+    // v3 — weekly stream runs (3-column recurring pipeline) and the
+    // per-stream day-of-week schedule on settings.
+    this.version(3)
+      .stores({
+        ideas: 'id, status, priority, dueDate, createdAt, updatedAt',
+        checklistTemplates: 'id, name',
+        checklistItems: 'id, ideaId, [ideaId+order]',
+        settings: 'id',
+        streamRuns: 'id, game, weekStart',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<AppSettings>('settings')
+          .toCollection()
+          .modify((settings) => {
+            settings.streamDays ??= defaultStreamDays()
+          })
       })
 
     // Seed on first run (fresh databases are created directly at the

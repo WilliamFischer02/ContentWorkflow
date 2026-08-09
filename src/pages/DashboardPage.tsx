@@ -2,12 +2,61 @@ import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import { db } from '../db/db'
+import { STREAMS, STREAM_GAMES } from '../content/streams'
+import { runProgress } from '../db/streams'
+import { weekStartISO } from '../lib/weeks'
 import { describeDue, formatRelativeTime, isDueWithin } from '../lib/dates'
 import { DueBadge, PriorityBadge, StatusBadge, TagChip } from '../components/badges'
 import { ProgressBar, ProgressRing } from '../components/ProgressBar'
 import { TwitchClipsPanel } from '../components/TwitchClipsPanel'
 import { EmptyState } from '../components/EmptyState'
-import { IconCalendar, IconChevronRight, IconClock } from '../components/Icons'
+import { IconCalendar, IconChevronRight, IconClock, IconTv } from '../components/Icons'
+
+/** Compact per-stream progress row linking into the weekly panel. */
+function WeekStrip() {
+  const weekStart = weekStartISO()
+  const runs = useLiveQuery(
+    () => db.streamRuns.where('weekStart').equals(weekStart).toArray(),
+    [weekStart],
+  )
+  const byGame = new Map(runs?.map((run) => [run.game, run]))
+
+  return (
+    <section className="anim-fade-up" style={{ '--stagger': 2 } as React.CSSProperties}>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-zinc-400">
+        <IconTv className="size-3.5 text-twitch" />
+        This week&rsquo;s streams
+      </h2>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {STREAM_GAMES.map((game) => {
+          const def = STREAMS[game]
+          const progress = runProgress(game, byGame.get(game))
+          return (
+            <Link
+              key={game}
+              to="/"
+              className={`stream-col ${def.themeClass} card-hover block p-4`}
+            >
+              <p className="flex items-center gap-2 text-sm font-bold">
+                <span aria-hidden>{def.emoji}</span>
+                {def.name}
+                <span
+                  className="ms-auto text-xs font-bold tabular-nums"
+                  style={{ color: 'var(--col-accent)' }}
+                >
+                  {progress.done}/{progress.total}
+                </span>
+              </p>
+              <div className="mt-2.5">
+                <ProgressBar done={progress.done} total={progress.total} compact />
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
 
 export function DashboardPage() {
   const ideas = useLiveQuery(() => db.ideas.toArray(), [])
@@ -103,6 +152,8 @@ export function DashboardPage() {
           ))}
         </div>
       </div>
+
+      <WeekStrip />
 
       {stats.dueSoon.length > 0 && (
         <section className="anim-fade-up" style={{ '--stagger': 2 } as React.CSSProperties}>

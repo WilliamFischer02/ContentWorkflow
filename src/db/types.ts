@@ -80,6 +80,34 @@ export interface AppSettings {
   id: string
   channelName: string
   quickLinks: QuickLink[]
+  /** Day-of-week (0=Sun…6=Sat) each weekly stream airs. */
+  streamDays: Record<string, number>
+}
+
+/** Per-step progress inside a weekly stream run. */
+export interface StreamStepState {
+  done: boolean
+  doneAt?: number
+  /** Clip counter for the select-clips step. */
+  count?: number
+  /** Sub-step completion, keyed by sub-step id. */
+  subs?: Record<string, boolean>
+}
+
+/**
+ * One week's instance of one recurring stream pipeline.
+ * id is deterministic (`${game}:${weekStart}`) so upserts are idempotent;
+ * step *definitions* live in code (src/content/streams.ts) — only state
+ * lives here, which lets the curated content evolve without migrations.
+ */
+export interface StreamRun {
+  id: string
+  game: string
+  /** ISO date (YYYY-MM-DD) of the Monday this week starts on. */
+  weekStart: string
+  steps: Record<string, StreamStepState>
+  createdAt: number
+  updatedAt: number
 }
 
 export const IDEA_STATUSES: IdeaStatus[] = ['backlog', 'active', 'done']
